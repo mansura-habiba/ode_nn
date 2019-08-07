@@ -1,3 +1,4 @@
 
 *.pyc
 .idea/*
+.ipynb_checkpoints/spectral_librosa-gru-checkpoint.ipynb
