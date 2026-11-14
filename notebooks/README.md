@@ -39,3 +39,10 @@ Notebook JSON and Python code syntax were checked in the authorship environment.
 ## Future development
 
 Subsequent notebooks should be added to this directory, using manuscript-style text plus executable methods. Proposed future experiments include event-triggered PDE–ODE dynamics, phase-aware spectral operators, JAX/Equinox/Diffrax baselines, and non-regressive neural weight repair under instrument/tempo shift.
+
+## New V3 research directions (14 November 2026)
+
+- **[Event-conditioned persistent PDE–ODE V3](Music_Event_Conditioned_Persistent_PDE_ODE_V3_Colab.ipynb)** — replaces the failed one-step/reset-at-every-step music methodology with one joint future solve of spectral field and latent state, history-predicted event forcing, multi-horizon loss, irregular observation masks, recording-disjoint evaluation, GRU/TCN/Transformer/neural ODE/persistence controls, and a **shared-subset 3-model Hugging Face transfer comparison**. Its main HF models are `ibm-research/ttm-research-r2`, `amazon/chronos-bolt-tiny`, and `amazon/chronos-t5-tiny`. Real recordings and full Colab execution are still required for any performance claims.
+- **[Music PCWSR/WSP mechanistic audit V3](Music_PCWSR_HF_WSP_Mechanistic_Audit_V3_Colab.ipynb)** — evaluates three open-weight instruction models proposing edits to frozen music convolution weights. New controls deliberately permute the training residual projection or generate random bounded edits, testing diagnostic sensitivity without using those controls for candidate selection. It cites the critical empirical audit [Ahmed, arXiv:2611.08070v1](https://arxiv.org/abs/2611.08070), alongside [Hu et al., arXiv:2611.09382](https://arxiv.org/abs/2611.09382) and Takehi et al.
+
+**Read the V3 notebooks first for new research.** The four V2 notebooks remain for reproducibility and historical comparisons. The original eight-frame plot does not show a coupled-model advantage; V3 is a new hypothesis, **not** a prevalidated improvement. All pretrained-model errors, invalid WSP proposals and negative outcomes must be retained in exported metrics.
