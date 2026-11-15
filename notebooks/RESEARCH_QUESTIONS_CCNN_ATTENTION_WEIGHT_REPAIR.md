@@ -290,3 +290,18 @@ evidence_status: "proposed | implemented | smoke_tested | evaluated | replicated
 - **H4f not tested:** no weight edit is attempted yet.
 
 **Decision and next action:** remain within RQ4/T1. Diagnose coarse-grid dispersion/parameter compensation, then test a genuinely learned nonlocal or adaptive operator against a tuned Fourier neural operator and attention baseline with fair compute budgets. **Do not claim CCNN superiority, add Transformer-scale integrations, or pursue WSP repair merely because the naive-stencil comparison is positive.** Preserve all earlier questions and negative-control results.
+
+
+## 10. Research evidence update — RQ6/RQ8 conditional-shift repair pilot (15 November 2026)
+
+**See [paper-style executable notebook](RQ6_RQ8_NonRegressive_Operator_Weight_Repair_Colab.ipynb) and [three-seed record](rq6_rq8_results_preliminary/README.md).**
+
+**Fixed overarching goal remains unchanged:** discover whether *continuous coupled dynamics* contribute something established architectures cannot achieve as effectively. The additional toy was intentionally performed as a **repair feasibility probe**, not as a substitute for the RQ1/RQ4 coupled-dynamics test.
+
+- **H6a supported *in a favorable toy*:** a single trained neural-operator weight (the correct conditional feature already existed in the architecture) improved shifted-domain MSE by ~99.99% with sparse Adam while leaving original-domain test error essentially unchanged.
+- **H8a supported *in a favorable toy*:** the identical edit worked at 16, 32, 64 and 128 grid points; the model and data were spectrally consistent and band-limited, so this is not a new spatial generalization theorem.
+- **Critical negative comparison:** a parameter-matched direct state-transition operator achieved almost the same repair accuracy. **Unique benefit of the continuous coupled ODE was not established.**
+- **Controls:** random bounded search also found good edits; no-defect controls did not accept a repair; an advective shift remained poorly predicted because real-valued damping edits cannot model phase changes; constrained full fine-tuning candidates were rejected by the old-domain gate in this limited tuning budget.
+- **H7 remains untested:** no Hugging Face weight-space proposals were generated. Results cannot be presented as WSP performance or weight-reasoning evidence.
+
+**Follow-up gate:** before further architecture development, test variable-time and irregularly sampled coupled dynamics against a direct learned time-conditioned map, a generic neural ODE, and a strong neural operator. Design tasks where the **coupling mechanism** is indispensable to generalization; only then revisit attention augmentation and localization/LLM proposals. The charter's original RQ1–RQ9 remain the governing questions. No notebook additions should silently promote toy feasibility to an architectural superiority claim.
