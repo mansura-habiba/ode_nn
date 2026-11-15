@@ -152,3 +152,23 @@ A publication-ready evaluation should include: held-out per-seed metrics, paired
 - **Not established:** general CCNN advantage, exact continuous-time solver superiority, an ability to preserve both domains without tradeoffs, or successful LLM weight reasoning.
 
 **Architectural hypothesis:** lag-kernel structure offers an interpretable, low-dimensional edit surface that may help attention and localize certain failures. **Empirical test:** determine when this wins, ties or loses against expressive, cost-matched alternatives under genuinely independent dynamics and independent source-retention tests.
+
+## 7. Validated visual panels
+
+These four separate SVG figures accompany the paper's [section 2.4](CCNN_Attention_Structured_Weight_Repair_Paper_Draft.md#24-four-panel-architecture-figures-validation-and-interpretation). They are corrected, **redrawn visual schematics** of the supplied four-panel illustration. The source raster panels are not claimed as measured experimental results.
+
+### A. Original theory
+![A original lag PDE and ODE](figures/A_original_lag_theory.svg)
+The lag coordinate and physical-time coordinate are distinct; the correct lag boundary condition is `u(t,0)=0`. V3 does not solve the delayed self-history feedback of the original theory.
+
+### B. Implemented architecture
+![B discrete attention augmented model](figures/B_v3_discrete_architecture.svg)
+V3 uses zero-padded lag histories, conditional Gaussian chirp kernel, cumulative sums, exponential leaky-state updates and attention fusion. It is not an adaptive numerical integrator.
+
+### C. Gate-free repair
+![C shared ungated repair](figures/C_gatefree_repair.svg)
+The frozen CCNN is held constant across edit surfaces; a common edit is active in both domains. Pure structured repair has up to five scalars; larger budgets are hybrid structured and spectral residuals.
+
+### D. Falsification plan
+![D decisive tests](figures/D_decisive_tests.svg)
+Unmatched kernel families are partly tested in V3; genuine independent dynamical systems, fractional long-range teachers, and measured two-dimensional loss landscapes remain further work. The supplied landscape is not experimental data.
