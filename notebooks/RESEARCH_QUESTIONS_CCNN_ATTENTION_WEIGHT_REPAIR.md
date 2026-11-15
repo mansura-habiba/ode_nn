@@ -9,6 +9,54 @@
 
 Attention-based neural networks provide effective content-dependent interactions, but the treatment of continuous dynamics, physical/spatial resolution changes, and adaptation to distribution shift remains an open architectural design problem. Coupled Continuous Convolutional Neural Networks (CCNNs), in the sense of the neural PDE–ODE framework of Habiba and Pearlmutter, provide a possible complementary mechanism: a field with shared spatial operators evolves continuously alongside a compact global state. This programme asks whether such dynamics **augment existing attention architectures** with useful information that cannot be obtained just as effectively by discrete convolution, generic Neural ODEs, or additional trainable parameters. A second, conditionally dependent programme tests **Physics-Constrained Weight-Space Repair (PCWSR)**: whether failures of a trained attention–CCNN hybrid can be localized and corrected through small parameter interventions, including edits proposed by open-weight language models. The investigation begins with falsifiable synthetic benchmarks spanning temporal extrapolation, irregular observations, spatial-resolution transfer, and controlled faults. It explicitly includes nonlocal negative controls, resolution-neutral baselines, numerical stability measurements, and WSP mechanism audits. Only after these tests justify the architecture will the programme expand to long-context and music tasks. This document registers questions, hypotheses, baselines, failure criteria, and decision gates; **no improvement is presumed**.
 
+## Research correction (15 November 2026): retain the *original CCNN structure*
+
+**This correction has precedence over spatial-diffusion interpretations below.**
+
+The original paper [R1] did **not** define its essential CCNN operator as the spatial reaction–diffusion equation used in the RQ4 toy. It generalized a causal time-delay convolution with a time-varying kernel:
+
+\[
+\dot y(t)= f\left(\int_0^T K_\theta(\tau,t)y(t-\tau)\,d\tau\right).
+\]
+
+It represented the accumulated convolution through a lag-indexed state,
+
+\[
+\partial_\tau u(t,\tau)=K_\theta(\tau,t)y(t-\tau),\quad
+u(t,0)=0,\quad \dot y(t)=f(u(t,T)).
+\]
+
+These are the paper's **history-lag** equations, not a discretized spatial diffusion model. The paper demonstrates a learned time-varying matched-filter response for simulated noisy chirps. Irregular sampling is motivated, but superiority under systematic irregular observation and time-varying global coupling is **not independently established** by the reported experiments.
+
+**Mathematical clarification / proposed extension, not an equation claimed from the paper:** the right-hand side still contains the delay \(y(t-\tau)\). To make the memory truly Markovian in an expanded state, introduce \(q(t,\tau)=y(t-\tau)\), satisfying the history transport PDE
+
+\[
+\partial_t q+\partial_\tau q=0,\qquad q(t,0)=y(t).
+\]
+
+Then define \(m_\theta(t)=\int_0^T K_\theta(\tau,t)q(t,\tau)d\tau\) and \(\dot y(t)=f(m_\theta(t))\). Boundary treatment, finite-history effects, data interpolation and approximation error must be specified before implementation.
+
+**Implication for RQ4:** the spatial diffusion results are valid *for that later spatial-operator extension*, but **do not refute or validate the defining lag-integral CCNN in [R1]**. A Fourier or finite-volume solver winning on a diffusion equation says little about whether causal kernel structure improves attention or makes model editing easier.
+
+### RQ1-M — Does the lag-structured CCNN provide complementary information to attention?
+
+Compare **attention only**, **attention + static/dynamic convolution**, **attention + original lag-kernel CCNN**, **attention + exponential-kernel SSM**, and **attention + generic Neural ODE**, all with actual timestamp information, matched capacity, and compute. A decisive toy should require retrieval of time-varying, delayed, noisy motifs with irregular observation times; evaluate event detection, recall accuracy, temporal extrapolation and latency. A learned *time-varying matched filter* is the natural bridge from the original paper—not generic diffusion forecasting. The question is whether the structure helps attention, not whether it can replace attention.
+
+### RQ6-M — Does kernel structure make weight-space repair identifiable and transferable?
+
+Consider a learned kernel \(K_\theta(\tau,t)\) with interpretable components (temporal support, decay, periodicity, time-dependent gain). Inject faults affecting **one kernel mechanism** while holding attention fixed. Compare bounded edits to these kernel parameters against Jacobian/Gauss–Newton, sparse Adam, full fine-tuning, random edits, and **three open-weight LLM proposers**. Only independent validation determines acceptance; score changed-domain improvement, original-domain non-regression, robustness to timestamp shifts, and compute. Add **permutation/renaming and diagnostic corruption** controls to test whether an LLM actually uses weight structure.
+
+For an efficient initial parameterization, a *sum of exponentials* is a useful null model:
+
+\[
+K_\theta(\tau,t)=\sum_{j=1}^r A_j(t)e^{-\lambda_j\tau},\qquad \lambda_j>0.
+\]
+
+For an infinite-horizon convolution with a time-independent exponent, the state \(m_j(t)=\int_0^\infty e^{-\lambda_j\tau}y(t-\tau)d\tau\) obeys \(\dot m_j=y-\lambda_jm_j\). This is a known state-space realization, **not a novel CCNN theorem**, and therefore must be compared with a strong state-space-model baseline. Finite windows introduce boundary terms that cannot be ignored.
+
+**Research priority updated:** test the *original* lag-kernel coupling's added value and repairability. Spatial-resolution transfer remains an optional extension, not a prerequisite for investigating lag-structured attention augmentation or kernel repair.
+
+
 ## 1. Invariant research goal
 
 > **Improve the predictive performance, generalization, and efficiency of attention-based neural networks by augmenting them with coupled Continuous CNN/PDE–ODE dynamics, and determine whether targeted weight-space edits can repair the resulting systems without full retraining or regression.**
