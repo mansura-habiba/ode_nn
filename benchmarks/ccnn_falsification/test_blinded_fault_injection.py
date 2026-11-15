@@ -36,6 +36,16 @@ class FaultInjectionTests(unittest.TestCase):
                     self.assertTrue(torch.equal(value, public.faulted_state[key]))
                 self.assertTrue(torch.equal(value, original[key]))
 
+    def test_checkpoint_hash_supports_zero_dimensional_scalar_and_matrix(self):
+        # Torch parameter states may mix [] scalars with multi-dimensional matrices.
+        state={"scalar":torch.tensor(0.125), "weights":torch.arange(6, dtype=torch.float32).reshape(2,3)}
+        digest=state_digest(state)
+        self.assertEqual(len(digest),64)
+        self.assertEqual(digest,state_digest({k:v.clone() for k,v in state.items()}))
+        different={k:v.clone() for k,v in state.items()}
+        different["scalar"]+=0.125
+        self.assertNotEqual(digest,state_digest(different))
+
     def test_zero_fault_is_perfect_placebo(self):
         public, oracle = inject_model_fault(self.state, family="delay_center",
                                             magnitude=0.0, sample_id="placebo")
