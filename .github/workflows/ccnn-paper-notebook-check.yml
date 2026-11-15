@@ -1,0 +1,76 @@
+name: CCNN paper-style notebook smoke execution
+
+on:
+  push:
+    branches: [research/ccnn-v3-falsification-executable]
+    paths:
+      - 'notebooks/CCNN_Attention_Weight_Space_Repair_Paper_Colab.ipynb'
+      - '.github/workflows/ccnn-paper-notebook-check.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'notebooks/CCNN_Attention_Weight_Space_Repair_Paper_Colab.ipynb'
+      - '.github/workflows/ccnn-paper-notebook-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notebook-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies (CPU)
+        run: |
+          python -m pip install numpy pandas matplotlib nbformat nbclient ipykernel
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Verify research sections and execute whole notebook
+        env:
+          MPLBACKEND: Agg
+        run: |
+          python - <<'PY'
+          import nbformat
+          from nbclient import NotebookClient
+          from pathlib import Path
+          path=Path('notebooks/CCNN_Attention_Weight_Space_Repair_Paper_Colab.ipynb')
+          nb=nbformat.read(path,as_version=4)
+          md='\n'.join(''.join(c.source) for c in nb.cells if c.cell_type=='markdown')
+          for heading in ('Abstract','Research question','Source basis and proposed method',
+                          'Experimental design','Results I','Results II','Discussion','References'):
+              assert heading.lower() in md.lower(),f'Missing paper section: {heading}'
+          assert 'FAST_MODE = True' in '\n'.join(c.source for c in nb.cells if c.cell_type=='code')
+          client=NotebookClient(nb,timeout=1200,kernel_name='python3',allow_errors=False)
+          client.execute(cwd='.')
+          cells=[c for c in nb.cells if c.cell_type=='code']
+          print('NOTEBOOK_CODE_CELLS',len(cells),'COMPLETED',sum(c.execution_count is not None for c in cells))
+          assert all(c.execution_count is not None for c in cells)
+          out=Path('ccnn_attention_repair_paper_outputs')
+          required=['attention_results.csv','repair_results.csv','fault_calibration.csv',
+                    'experiment_manifest.json','Figure_01_Attention_Augmentation.png',
+                    'Figure_02_Repair_Tradeoff.png']
+          for file in required: assert (out/file).is_file(),f'missing {file}'
+          import json,pandas as pd
+          manifest=json.loads((out/'experiment_manifest.json').read_text())
+          assert manifest['confirmatory'] is False
+          a=pd.read_csv(out/'attention_results.csv')
+          b=pd.read_csv(out/'repair_results.csv')
+          assert len(a)==3 and len(b)==8,(len(a),len(b))
+          assert set(a.model)=={'attention','ccnn','fir'}
+          print('SMOKE_RESULT_SUMMARY',{'architecture_rows':len(a),'repair_rows':len(b),
+                 'statuses':b.status.value_counts().to_dict(),'manifest_status':manifest['evidence_status']})
+          nbformat.write(nb,'ccnn_paper_notebook_executed.ipynb')
+          PY
+      - name: Archive smoke evidence (not scientific claims)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccnn-paper-style-notebook-smoke
+          path: |
+            ccnn_attention_repair_paper_outputs/
+            ccnn_paper_notebook_executed.ipynb
+          if-no-files-found: warn
