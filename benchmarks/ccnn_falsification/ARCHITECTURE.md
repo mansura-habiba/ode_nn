@@ -1,5 +1,7 @@
 # Paper-style architecture: coupled lag PDE / latent ODE
 
+**Research goal:** CCNN's incremental value for attention and for localized gate-free weight-space repair (RQ1-M/RQ6-M), **not** demonstration of superior ODE solvers. The PDE/ODE equations explain the tested mechanism and its coupling; solver details are only controls where needed.
+
 The design follows the visual grammar of [Habiba & Pearlmutter, *Continuous Convolutional Neural Networks*](https://arxiv.org/abs/2111.00343) and [Chen et al., *Neural Ordinary Differential Equations*](https://arxiv.org/abs/1806.07366): **state evolution, continuous operators, numerical readout, and intervention location** rather than a software-component deployment diagram.
 
 ## Figure 1 — model and falsification controls
@@ -56,12 +58,12 @@ No domain indicator enters the model forward pass. The validation constraint **d
 - **(A) Architecture/continuous-time formulation:** observation stream → causal lag kernel → lag-accumulation PDE → ODE latent trajectory; attention as a separate shared readout.
 - **(B) What the mechanism can and cannot represent:** overlay true generating kernels on normalized lag, with separate q trajectories for unimodal chirp, bimodal, boxcar, damped oscillator, switching and feedback-dynamics families. The teacher must not be confused with a learned kernel.
 - **(C) Repair geometry:** matched budgets 1,5,18,36,56; display recovery-versus-preservation scatter/paired distribution. The proposed CCNN is distinguished by linestyle/hatching, **not** a claim of superiority.
-- **(D) Continuous dynamics diagnostic (next phase):** compare evolved z(t) to held-out continuous-time targets, with solver error vs number of function evaluations (NFE) and irregular observation timestamps. This is an explicitly **future** experiment, not a capability shown by the current discrete benchmark.
+- **(D) Attention complementarity diagnostic (next phase):** ablate the structured branch, query-conditioning and ODE-state contribution under matched budgets; score held-out delayed-motif recognition/recall and efficiency. Irregular timestamps are a robustness stressor, not the central claim.
 
 All publication plots should be vector PDF/SVG plus PNG, independent-seed markers, equal axes where comparisons are made, captions naming the source/test population, and unambiguous ‘illustrative’ labels until replicated.
 
 ## Crucial separation
 
-The **architecture experiment** compares trained CCNN with trained attention-only and dynamic FIR networks, recording model size/compute. The **repair experiment** applies different edits to the **same frozen CCNN**; this eliminates a major confound from comparing a CCNN repair to a separately pretrained unstructured network.
+The **architecture experiment** compares trained CCNN with attention-only, static FIR, query-conditioned dynamic FIR and exponential SSM baselines, recording size/compute. The **repair experiment** applies structured, tangent-aligned, spectral, low-rank and full FIR edits to the **same frozen CCNN**; this eliminates a major confound from comparing a CCNN repair to a separately pretrained unstructured network.
 
 References: [CCNN 2021](https://arxiv.org/abs/2111.00343), [Neural ODE 2018](https://arxiv.org/abs/1806.07366).
