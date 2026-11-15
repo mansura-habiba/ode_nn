@@ -55,7 +55,8 @@ jobs:
           out=Path('ccnn_zoology_paper_outputs')
           required=['architecture_per_configuration.csv','learning_curves.csv',
                     'fault_calibration.csv','repair_per_method.csv',
-                    'experiment_manifest.json','Figure_01_Official_MQAR_Recall.png',
+                    'experiment_manifest.json','paired_seed_effects.csv','repair_seed_effects.csv',
+                    'Figure_01_Official_MQAR_Recall.png',
                     'Figure_02_Repair_Preservation.png']
           for name in required:assert (out/name).is_file(),f'Missing {name}'
           manifest=json.loads((out/'experiment_manifest.json').read_text())
@@ -69,6 +70,8 @@ jobs:
           assert len(a)==6 and len(b)==8,(len(a),len(b))
           assert set(a.kind)=={'attention','ccnn','fir'}
           assert all(b.status=='engineering_smoke'), "Smoke must not report repair efficacy"
+          effects=pd.read_csv(out/'paired_seed_effects.csv')
+          assert len(effects)==6 and effects.ci_low.isna().all(), 'One-seed smoke cannot estimate CI'
           print('OFFICIAL_ZOOLOGY_PROTOCOL_SMOKE',json.dumps(dict(
               code_cells=len(cells),architecture_rows=len(a),repair_rows=len(b),
               upstream_commit=manifest['official_zoology_revision'],
