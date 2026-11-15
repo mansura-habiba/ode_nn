@@ -1,7 +1,7 @@
 # Research charter: coupled Continuous CNNs, attention augmentation, and verified weight-space repair
 
 **Status:** living research charter, version 1.0 — 15 November 2026  
-**Repository:** \`mansura-habiba/ode_nn\`  
+**Repository:** `mansura-habiba/ode_nn`  
 **Scope:** research questions and experimental decision rules, **not** a new notebook, algorithmic result, or performance claim.  
 **Primary source:** Habiba & Pearlmutter, *Continuous Convolutional Neural Networks: Coupled Neural PDE and ODE* (2021) [R1].
 
@@ -208,7 +208,7 @@ Pre-register before running any experiment:
 4. **Statistics:** prefer at least ten independent seeds for claims, paired per-seed results, bootstrap confidence intervals or equivalent, and the distribution of individual failures. The preliminary three-seed toy is hypothesis-generating.
 5. **Negative controls:** deliberately nonlocal dynamics, zero/altered diffusion, randomized spatial neighborhoods, permuted WSP diagnostics, no-defect repair controls.
 6. **Proposed-method highlighting:** comparison plots must show **absolute metrics**, **delta vs a matched baseline**, **confidence intervals**, and **runtime**. Highlighting the proposed model must never imply it wins.
-7. **Status discipline:** \`not_run\`, \`failed_to_load\`, \`invalid_proposal\`, \`rejected\`, \`accepted\`, and \`evaluated\` are distinct. No missing model gets a fabricated score; do not treat a rejected WSP repair as a successful one.
+7. **Status discipline:** `not_run`, `failed_to_load`, `invalid_proposal`, `rejected`, `accepted`, and `evaluated` are distinct. No missing model gets a fabricated score; do not treat a rejected WSP repair as a successful one.
 
 **Provisional decision rule, to freeze before the first confirmatory study:** advance a CCNN contribution only when it gives a repeatable, useful improvement in the designated out-of-distribution metric with no unacceptable in-domain regression, *and* it is not dominated on error/cost by the strongest matched alternative. Avoid selecting thresholds after looking at test results. An illustrative threshold for planning is \(\ge5\%\) relative error reduction with a paired confidence interval excluding zero; the actual threshold should be specified per task before the experiment.
 
@@ -216,7 +216,7 @@ Pre-register before running any experiment:
 
 Every new experiment, notebook or GitHub PR MUST begin with the following **Research Identity Record**:
 
-\`\`\`yaml
+```yaml
 research_goal: "Improve attention through coupled continuous dynamics; assess non-regressive weight repair"
 primary_question: "RQ# from this charter"
 hypothesis: "Falsifiable one-sentence prediction"
@@ -229,7 +229,7 @@ compute_budget: "training/inference/runtime/solver requirements"
 train_validation_test_boundary: "how leakage is prevented"
 acceptance_and_stop_rules: "defined before test run"
 evidence_status: "proposed | implemented | smoke_tested | evaluated | replicated"
-\`\`\`
+```
 
 **Before changing direction, the agent must:**
 
