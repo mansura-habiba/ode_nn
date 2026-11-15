@@ -13,7 +13,7 @@ def cohort(prefix, labels, clean, faulted, repaired, placebo):
 
 class RepairEvaluationTests(unittest.TestCase):
     def setUp(self):
-        self.source=cohort("old",[0.,0.],[0.,0.],[0.05,0.],[0.02,0.],[0.,0.])
+        self.source=cohort("old",[0.,0.],[0.,0.],[0.05,0.],[0.01,0.],[0.,0.])
         self.new=cohort("affected",[0.,0.],[0.,0.],[0.5,0.5],[0.1,0.1],[0.,0.])
         self.val=select_on_validation(baseline_shift_mse=0.25,candidate_shift_mse=0.01,
             baseline_source_mse=0.001,candidate_source_mse=0.0002)
