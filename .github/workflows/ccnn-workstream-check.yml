@@ -1,33 +1,77 @@
-name: CCNN independent workstream invariant tests
+name: CCNN integrated research component verification
 
 on:
   push:
     branches:
-      - research/ccnn-protocol-lock
-      - research/ccnn-independent-teachers
-      - research/ccnn-strong-fir-control
-      - research/ccnn-blinded-fault-injection
+      - research/ccnn-v3-falsification-executable
   pull_request:
     branches:
-      - research/ccnn-v3-falsification-executable
+      - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
+  unit-matrix:
+    name: "Independent verification: ${{ matrix.workstream }}"
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - workstream: protocol-5
+            test: test_study_registration.py
+          - workstream: independent-teachers-6
+            test: test_independent_teachers.py
+          - workstream: strong-fir-7
+            test: test_strong_fir_baseline.py
+          - workstream: blinded-faults-10
+            test: test_blinded_fault_injection.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install deterministic CPU test dependencies
+          python-version: "3.11"
+      - name: Install CPU test dependencies
         run: |
           python -m pip install numpy matplotlib
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - name: Compile all benchmark Python modules
+      - name: Compile Python sources
         run: python -m compileall -q benchmarks/ccnn_falsification
-      - name: Run protocol, teacher, baseline, fault and V3 tests
+      - name: Run workstream invariant suite
+        run: python -m unittest discover -v -s benchmarks/ccnn_falsification -p "${{ matrix.test }}"
+
+  verify-integrated:
+    name: Unified suite (all workstreams together)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU test dependencies
+        run: |
+          python -m pip install numpy matplotlib pytest
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Compile Python sources
+        run: python -m compileall -q benchmarks/ccnn_falsification
+      - name: All new and inherited unit/invariant tests
         run: python -m unittest discover -v -s benchmarks/ccnn_falsification -p 'test_*.py'
+      - name: Legacy pytest-style protocol checks
+        run: python -m pytest -q benchmarks/ccnn_falsification/test_protocol.py
+      - name: Check Colab notebook matches repo Python benchmark code
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('benchmarks/ccnn_falsification')
+          p=Path('notebooks/CCNN_Unmatched_Kernels_Gatefree_Repair_V3_Colab.ipynb')
+          notebook=json.loads(p.read_text())
+          scripts=[ ''.join(c.get('source',[])) for c in notebook['cells'] if c.get('cell_type')=='code' ]
+          target=(root/'ccnn_generalization_benchmark.py').read_text()
+          assert target in scripts, 'V3 standalone benchmark and Colab code diverged'
+          print('V3 notebook–script source fingerprint matches')
+          PY
