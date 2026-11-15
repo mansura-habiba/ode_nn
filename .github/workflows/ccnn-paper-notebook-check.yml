@@ -48,7 +48,8 @@ jobs:
           assert 'MODE = "SMOKE"' in code
           assert 'https://raw.githubusercontent.com/HazyResearch/zoology/' in code
           assert 'official_mqar' in code and 'PUBLISHED_TRAIN' in code
-          assert 'test_labels' not in code or 'oracle' in md.lower()
+          assert 'RANDOM_NON_QUERIES' in code and 'official_mqar' in code
+          assert 'ICLR24_TRAIN' in code and 'ICLR24_TEST' in code
           executed=NotebookClient(nb,timeout=1200,kernel_name='python3',allow_errors=False).execute(cwd='.')
           cells=[c for c in executed.cells if c.cell_type=='code']
           assert len(cells)>=7 and all(c.execution_count is not None for c in cells)
