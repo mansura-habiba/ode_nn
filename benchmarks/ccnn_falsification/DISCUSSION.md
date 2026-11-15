@@ -15,4 +15,6 @@ The follow-up experiment should test dynamics outside the hypothesized kernel cl
 
 **Minimum additional reporting:** 10+ independent paired seeds, shift magnitudes including zero, separate train/validation/test populations, total parameters and *updated* parameters, wall time and optimization evaluations, accepted-edits rate, source regression counts, test effect sizes with paired bootstrap CIs, and failure cases. Add at least one non-synthetic real sequence benchmark.
 
+RQ1-M and RQ6-M remain the core objectives: complementary attention information and non-regressive weight-space repair. **Superior numerical integration is not a hypothesis under test.** A strong local tangent adapter, which changes many effective kernel values using one (or five) scalars, is required to avoid comparing a semantically powerful center edit with an arbitrarily handicapped filter coefficient. If the tangent control ties or wins, it challenges a uniquely structured editing advantage.
+
 No new benchmark results in the V3 proposal should be described as independently replicated until the suite has been executed and audited.
