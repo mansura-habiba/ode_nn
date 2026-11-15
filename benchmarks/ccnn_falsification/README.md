@@ -61,6 +61,12 @@ At >5 parameters, **structured is a hybrid**, so interpret separately from pure 
 
 ## Running
 
+The fast invariant test file checks parameter counts, identity-at-zero edits, first-order structured/tangent agreement, and absence of a domain-selective forward argument. **Its assertions are committed but have not been executed or independently verified in this session.** Run it before trusting V3 benchmark outcomes.
+
+```bash
+python -m unittest discover -s benchmarks/ccnn_falsification -p 'test_*.py'
+```
+
 Run the stand-alone `ccnn_generalization_benchmark.py` from this directory or Colab. Dependencies: Python 3.10+, `numpy`, `torch`, `matplotlib`.
 
 ```bash
