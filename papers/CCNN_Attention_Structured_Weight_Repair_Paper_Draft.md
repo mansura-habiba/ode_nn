@@ -70,6 +70,16 @@ flowchart LR
 
 The **novelty under examination** is not the existence of a continuous integral, an ODE, or a convolution alone. It is the *incremental utility* of the original lag-structured mechanism when used alongside attention, and the identifiability of its parameter repair surface.
 
+## 2.3 Architecture and V3 falsification alignment
+
+The detailed, versioned architecture specification is maintained in **[CCNN Architecture: Coupled Lag Dynamics and Gate-Free Structure-Aware Repair](CCNN_ARCHITECTURE.md)**. It relates the original Habiba–Pearlmutter lag PDE–ODE formulation to the implemented V3 discrete model and the planned mechanism-specific evaluations.
+
+In the original source theory, the lag field accumulates delayed history and its boundary drives dynamical evolution. **V3 approximates this** with an explicitly constructed, zero-padded causal history `H(t,j)=x(t-j)`, a normalized query-conditioned Gaussian-chirp kernel, discrete cumulative lag sums, and exponential stepping of a leaky latent state. The output adds a learned-scale lag response to a common self-attention prediction; this is an attention augmentation experiment, not a claim to implement an adaptive continuous-time PDE/ODE solver.
+
+For repair, V3 **freezes the source attention–CCNN model** and tests shared, ungated kernel edits on *both* source and shifted populations. Its budgets `1, 5, 18, 36, 56` compare structured/hybrid, spectral, rank-limited and full lag-by-query correction surfaces, with validation-only edit selection and independent test-domain retention. Above five adjustable scalars, “structured” denotes **structured plus spectral residual** rather than a purely five-parameter kernel intervention. A source-validation tolerance is not a guarantee of source-test preservation.
+
+The supplied four-panel illustration maps to **(A)** original theory, **(B)** implemented V3 surrogate, **(C)** proposed shared-weight repair comparisons, and **(D)** decisive planned falsification tests. Unmatched kernel families and independent-domain evaluation are in V3; loss-landscape trajectories are a **planned measurement**, not an observed empirical figure. See the companion architecture for the equations, Mermaid diagrams, explicit repair-budget table and evidence boundary.
+
 ## 3. Research hypotheses and prior-defined evaluation
 
 - **H-A: attention augmentation.** A structured lag kernel may outperform attention alone and comparably sized static/dynamic convolution and exponential-memory controls on a changing-delay matched-filter task.
