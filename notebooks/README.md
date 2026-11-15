@@ -4,6 +4,13 @@
 
 This directory is the canonical location for research notebooks in `ode_nn`. Updates to the music PDE–ODE and PCWSR studies should be committed here, preserving a reviewable change history.
 
+## Current RQ4 study — spatial-resolution transfer (15 November 2026)
+
+- **[RQ4 Spatial-Resolution Transfer Colab](RQ4_CCNN_Spatial_Resolution_Transfer_Colab.ipynb)** — trains at 16 spatial channels, evaluates 16/32/64/128, compares grid-aware and unscaled CCNNs with a spectral CCNN, pointwise Neural ODE, FNO-lite and coordinate-aware attention on both local and nonlocal generators. Its live **hypothesis evidence ledger** reports supported, contradicted, inconclusive and untested outcomes, then generates a conclusion and next experiments.
+- **[RQ4 preliminary three-seed evidence](rq4_results_preliminary/README.md)** and [raw evaluation metrics](rq4_results_preliminary/RQ4_preliminary_3seed_metrics.json) — a local CPU diagnostic, **not a general CCNN win**. Mesh scaling is supported relative to an unscaled stencil; the strong spectral baseline and nonlocal negative control challenge broader claims. Cross-resolution WSP repair remains untested.
+
+**Research decision:** complete the operator-consistency and nonlocal tests before proceeding to attention augmentation (RQ1) or weight-space repair (RQ8). Preserve negative results.
+
 ## Current studies
 
 | Notebook | Proposed method | Primary evaluation |
