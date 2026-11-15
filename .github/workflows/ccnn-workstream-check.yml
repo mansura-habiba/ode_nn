@@ -72,6 +72,14 @@ jobs:
           notebook=json.loads(p.read_text())
           scripts=[ ''.join(c.get('source',[])) for c in notebook['cells'] if c.get('cell_type')=='code' ]
           target=(root/'ccnn_generalization_benchmark.py').read_text()
-          assert target in scripts, 'V3 standalone benchmark and Colab code diverged'
-          print('V3 notebook–script source fingerprint matches')
+          # Colab must omit the CLI auto-run entrypoint; otherwise Jupyter injects
+          # its kernel '-f ...json' flags and argparse fails. Compare all shared
+          # definitions, allowing ONLY this deliberate suffix substitution.
+          suffix="if __name__=='__main__':\\n    benchmark_cli()\\n"
+          assert target.endswith(suffix), 'Unexpected standalone CLI entrypoint'
+          shared=target[:-len(suffix)]
+          assert any(code.startswith(shared) and code[len(shared):].strip() ==
+              '# Colab/Jupyter: do not auto-run benchmark_cli() here.\\n# Execute the next experiment cell to select smoke/full explicitly.'
+              for code in scripts), 'V3 notebook and standalone definitions diverged'
+          print('V3 shared definitions match; Colab CLI entrypoint intentionally disabled')
           PY
