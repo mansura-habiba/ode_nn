@@ -1,0 +1,33 @@
+name: CCNN independent workstream invariant tests
+
+on:
+  push:
+    branches:
+      - research/ccnn-protocol-lock
+      - research/ccnn-independent-teachers
+      - research/ccnn-strong-fir-control
+      - research/ccnn-blinded-fault-injection
+  pull_request:
+    branches:
+      - research/ccnn-v3-falsification-executable
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deterministic CPU test dependencies
+        run: |
+          python -m pip install numpy matplotlib
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Compile all benchmark Python modules
+        run: python -m compileall -q benchmarks/ccnn_falsification
+      - name: Run protocol, teacher, baseline, fault and V3 tests
+        run: python -m unittest discover -v -s benchmarks/ccnn_falsification -p 'test_*.py'
