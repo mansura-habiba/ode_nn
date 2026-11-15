@@ -11,6 +11,15 @@ This directory is the canonical location for research notebooks in `ode_nn`. Upd
 
 **Research decision:** complete the operator-consistency and nonlocal tests before proceeding to attention augmentation (RQ1) or weight-space repair (RQ8). Preserve negative results.
 
+
+## Current RQ6/RQ8 repair-feasibility pilot (15 November 2026)
+
+- **[RQ6/RQ8 — Non-Regressive Operator Weight Repair Colab](RQ6_RQ8_NonRegressive_Operator_Weight_Repair_Colab.ipynb)** — tests a trained, resolution-neutral Fourier/coupled global operator under a conditional shift. A one-weight edit is selected by independent two-domain validation, then transferred without refitting from 16 to 128 channels. A parameter-matched *direct state-transition* control challenges the need for continuous coupling.
+- **[Reproducible Python experiment](rq6_rq8_operator_weight_repair.py)** and **[three-seed evidence and hypothesis ledger](rq6_rq8_results_preliminary/README.md)**; [raw JSON](rq6_rq8_results_preliminary/RQ6_RQ8_3seed_metrics.json).
+
+**Result:** one-weight repair is feasible for this favorable representable toy; sparse Adam performs extremely well but a direct-state-map comparator does almost as well. **No unique advantage of coupled continuous dynamics is demonstrated.** This is an exploratory precursor to RQ6/RQ8, not completion of the main CCNN–attention or WSP questions. Next: varying elapsed times, irregular observations and dynamic coupling against matched controls.
+
+
 ## Current studies
 
 | Notebook | Proposed method | Primary evaluation |
