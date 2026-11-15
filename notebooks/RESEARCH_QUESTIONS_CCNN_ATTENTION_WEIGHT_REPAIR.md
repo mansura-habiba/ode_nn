@@ -275,3 +275,18 @@ evidence_status: "proposed | implemented | smoke_tested | evaluated | replicated
 ---
 
 **Research continuity rule:** Cite this charter's RQ ID and version in every future experiment. A new notebook is a test instrument; **the goal is the invariant research question, not notebook production**.
+
+## RQ4 evidence log — 15 November 2026 (preliminary)
+
+**Experiment:** [Spatial-resolution transfer toy](RQ4_CCNN_Spatial_Resolution_Transfer_Colab.ipynb) and [three-seed local CPU evidence](rq4_results_preliminary/README.md).
+
+**Status:** implemented and locally executed with three seeds; **not** independently replicated, compute-matched, or executed in Colab. Train grid N=16; test N=16/32/64/128; local-diffusion generator and nonlocal negative control.
+
+- **H4a supported in toy:** scaled conservative diffusion beats an unscaled stencil at finer grids.
+- **H4b contradicted in toy:** finite-volume CCNN does not beat a spectrally consistent coupled operator; the latter nearly matches the local reference because they share its operator family.
+- **H4c contradicted in toy:** diffusion-only structure does not generalize to the nonlocal interaction as well as the FNO-style baseline.
+- **H4d contradicted by predeclared tolerance:** scaled CCNN remains finite but its relative error grows as resolution increases.
+- **H4e inconclusive:** runtime measurement compares different numerical strategies and cannot establish efficiency.
+- **H4f not tested:** no weight edit is attempted yet.
+
+**Decision and next action:** remain within RQ4/T1. Diagnose coarse-grid dispersion/parameter compensation, then test a genuinely learned nonlocal or adaptive operator against a tuned Fourier neural operator and attention baseline with fair compute budgets. **Do not claim CCNN superiority, add Transformer-scale integrations, or pursue WSP repair merely because the naive-stencil comparison is positive.** Preserve all earlier questions and negative-control results.
