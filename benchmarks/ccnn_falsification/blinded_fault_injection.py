@@ -41,7 +41,7 @@ def state_digest(state: Mapping[str, torch.Tensor]) -> str:
         h.update(name.encode("utf-8"))
         h.update(str(tuple(raw.shape)).encode("ascii"))
         h.update(str(raw.dtype).encode("ascii"))
-        h.update(raw.view(torch.uint8).numpy().tobytes())
+        h.update(raw.reshape(-1).view(torch.uint8).numpy().tobytes())
     return h.hexdigest()
 
 
