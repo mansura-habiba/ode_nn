@@ -1,12 +1,268 @@
-## 3. Expected outcomes and empirical boundaries
+"""RQ1-M and RQ6-M reproducible toy: time-varying causal lag kernel and repair.
+No external datasets, GPU, authentication, or downloads required.
+"""
+from __future__ import annotations
+import os, json, time, copy, math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
 
-If the source generator's filter is truly structured, its low-dimensional parameterization should offer improved sample efficiency and a small repair surface. A sufficiently expressive dynamic filter may also learn the generator. **A favorable matched-generator result is not evidence of broad architectural superiority.** The original-domain behavior is protected by an *explicit domain-gated repair parameter*; this preservation is by construction and should not be advertised as a learned general non-regression guarantee. A generic one-scalar dynamic-filter edit is a deliberately restricted control; broader low-rank or full-kernel editing may be much stronger.
+N=48; L=14; W=32; SEEDS=[11,23]; torch.set_num_threads(2)
 
-### Implementation protocol
+def make_data(count:int, seed:int, shift=0.0, regime='standard'):
+    r=np.random.default_rng(seed)
+    t=np.linspace(0,1,N,dtype=np.float32)[None,:]
+    q0=r.uniform(-.7,.7,(count,1)).astype(np.float32)
+    slope=r.uniform(-.25,.25,(count,1)).astype(np.float32) if regime=='standard' else r.uniform(-.85,.85,(count,1)).astype(np.float32)
+    q=np.clip(q0+slope*(t-.5)+.23*np.sin(2*np.pi*(t+r.uniform(0,1,(count,1)))), -1.5,1.5).astype(np.float32)
+    x=r.normal(0,.4,(count,N)).astype(np.float32)
+    # randomized chirp-like motifs with unrelated distractors
+    for b in range(count):
+        for _ in range(3):
+            loc=int(r.integers(0,N))
+            idx=np.arange(N)-loc
+            envelope=np.exp(-.5*(idx/float(r.uniform(3,7)))**2)
+            phase=2*np.pi*(r.uniform(.12,.28)*idx + r.uniform(.001,.009)*idx**2)
+            x[b]+=float(r.choice([-1,1])*r.uniform(.3,1.2))*envelope*np.cos(phase)
+    return torch.tensor(x),torch.tensor(q)
 
-The next cell includes all model definitions. There is no external dataset, checkpoint, token, or GitHub file required. The learned and reference kernels share a function family by design. `QUICK=1` provides a smoke test; the default uses two seeds, 30 epochs, and 480 training sequences per seed. CPU suffices.
+def lag_history(x):
+    # H[b,t,j]=x[b,t-j] and zero for t<j (causal prehistory)
+    return torch.stack([F.pad(x[:,:N-j],(j,0)) for j in range(L)],dim=-1)
 
+def kernel(q,mu0,muq,logsigma,freq,chirp,domain_shift=None):
+    tau=torch.arange(L,device=q.device,dtype=q.dtype).view(1,1,L)/(L-1)
+    mu=mu0+muq*q.unsqueeze(-1)
+    if domain_shift is not None:mu=mu+domain_shift
+    width=F.softplus(torch.as_tensor(logsigma,device=q.device,dtype=q.dtype))+.04
+    envelope=torch.exp(-.5*((tau-mu)/width)**2)
+    phase=2*torch.pi*(freq*tau+chirp*tau.square())
+    raw=envelope*torch.cos(phase)
+    return raw/(raw.square().sum(-1,keepdim=True).sqrt()+1e-7)
 
+def integrate_drive(m):
+    # z' = -8z + 8 tanh(2m); exponential time stepping over dt=1/N.
+    alpha=1.-math.exp(-8./N)
+    z=torch.zeros_like(m[:,0])
+    for j in range(m.shape[1]):z=(1-alpha)*z+alpha*torch.tanh(2.*m[:,j])
+    return z
+
+TRUE=dict(mu0=.43,muq=.145,logsigma=-2.35,freq=2.15,chirp=.62)
+
+def target(x,q,shift=0.0):
+    with torch.no_grad():
+        k=kernel(q,**TRUE,domain_shift=shift)
+        u=torch.cumsum(k*lag_history(x),dim=-1) # lag-PDE quadrature state
+        return integrate_drive(u[:,:,-1])
+
+class Attention(nn.Module):
+    def __init__(self,width=W):
+        super().__init__()
+        self.embed=nn.Linear(4,width)
+        self.att=nn.MultiheadAttention(width,4,batch_first=True)
+        self.head=nn.Sequential(nn.LayerNorm(width),nn.Linear(width,24),nn.Tanh(),nn.Linear(24,1))
+    def forward(self,x,q):
+        p=torch.arange(N,device=x.device,dtype=x.dtype)[None,:]/N
+        a=self.embed(torch.stack([x,q,p.expand_as(x),p.expand_as(x).square()],-1))
+        attention=self.att(a,a,a,need_weights=False)[0]
+        return self.head((a+attention).mean(1)).squeeze(-1)
+
+class LagField(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.mu0=nn.Parameter(torch.tensor(.32))
+        self.muq=nn.Parameter(torch.tensor(.1))
+        self.logsigma=nn.Parameter(torch.tensor(-2.2))
+        self.freq=nn.Parameter(torch.tensor(2.0))
+        self.chirp=nn.Parameter(torch.tensor(.5))
+        self.gain=nn.Parameter(torch.tensor(.9))
+    def response(self,x,q,delta=None):
+        k=kernel(q,self.mu0,self.muq,self.logsigma,self.freq,self.chirp,domain_shift=delta)
+        lag_pde=torch.cumsum(k*lag_history(x),-1)
+        return self.gain*integrate_drive(lag_pde[:,:,-1])
+
+class StaticFilter(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weights=nn.Parameter(torch.randn(L)*.1)
+        self.gain=nn.Parameter(torch.tensor(1.))
+    def response(self,x,q):
+        weights=self.weights/(self.weights.square().sum().sqrt()+1e-7)
+        m=(lag_history(x)*weights).sum(-1)
+        return self.gain*integrate_drive(m)
+
+class DynamicFilter(nn.Module):
+    """Query-conditioned arbitrary discrete lag kernel: 14 weights change with q."""
+    def __init__(self):
+        super().__init__()
+        self.base=nn.Parameter(torch.randn(L)*.1)
+        self.by_query=nn.Parameter(torch.randn(L)*.05)
+        self.gain=nn.Parameter(torch.tensor(.9))
+    def response(self,x,q,delta=None):
+        weights=self.base[None,None,:]+q[:,:,None]*self.by_query[None,None,:]
+        if delta is not None:
+            # A chosen unstructured coordinate; independent scalar edit budget.
+            weights=weights+delta*F.one_hot(torch.tensor(4,device=x.device),L).float()
+        weights=weights/(weights.square().sum(-1,keepdim=True).sqrt()+1e-7)
+        m=(lag_history(x)*weights).sum(-1)
+        return self.gain*integrate_drive(m)
+
+class ExpSSM(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.raw_decays=nn.Parameter(torch.tensor([-3.,-1.,1.,3.]))
+        self.mix=nn.Parameter(torch.randn(4)*.05)
+        self.qmix=nn.Parameter(torch.randn(4)*.05)
+        self.gain=nn.Parameter(torch.tensor(.9))
+    def response(self,x,q):
+        decays=F.softplus(self.raw_decays)+.02
+        state=torch.zeros((x.shape[0],4),device=x.device)
+        out=[]
+        for j in range(N):
+            state=state*torch.exp(-decays)[None,:]+x[:,j:j+1]
+            out.append((state*(self.mix+q[:,j:j+1]*self.qmix)).sum(-1))
+        return self.gain*integrate_drive(torch.stack(out,1))
+
+class Model(nn.Module):
+    def __init__(self,kind):
+        super().__init__();self.kind=kind
+        self.att=Attention()
+        if kind=='lag':self.branch=LagField()
+        if kind=='static':self.branch=StaticFilter()
+        if kind=='ssm':self.branch=ExpSSM()
+        if kind=='dynamic':self.branch=DynamicFilter()
+        if kind!='attention':self.gate=nn.Parameter(torch.tensor(.95))
+    def forward(self,x,q,delta=None):
+        a=self.att(x,q)
+        if self.kind=='attention':return a
+        r=self.branch.response(x,q,delta) if self.kind in ('lag','dynamic') else self.branch.response(x,q)
+        return a+self.gate*r
+
+def fit(kind,seed,epochs=38,train_n=550):
+    torch.manual_seed(seed)
+    model=Model(kind)
+    opt=torch.optim.AdamW(model.parameters(),lr=.003,weight_decay=.0001)
+    x,q=make_data(train_n,seed+100);y=target(x,q)
+    xv,qv=make_data(150,seed+200);yv=target(xv,qv)
+    best=float('inf');state=None; start=time.perf_counter()
+    for ep in range(epochs):
+        model.train()
+        for idx in torch.randperm(len(x)).split(96):
+            opt.zero_grad();out=model(x[idx],q[idx]);loss=(out-y[idx]).square().mean();loss.backward();opt.step()
+        with torch.no_grad():val=((model(xv,qv)-yv)**2).mean().item()
+        if val<best:best=val;state=copy.deepcopy(model.state_dict())
+    model.load_state_dict(state);model.eval()
+    xt,qt=make_data(240,seed+300);yt=target(xt,qt)
+    with torch.no_grad():test=((model(xt,qt)-yt)**2).mean().item()
+    # query-shift tests: change shape of time-varying q but not physics
+    xs,qs=make_data(240,seed+400,regime='shifted');ys=target(xs,qs)
+    with torch.no_grad():ood=((model(xs,qs)-ys)**2).mean().item()
+    return model,dict(kind=kind,seed=seed,validation_mse=best,test_mse=test,ood_mse=ood,train_seconds=time.perf_counter()-start,parameters=sum(p.numel() for p in model.parameters()))
+
+def repair_experiment(model,seed,shift=.12):
+    # Base trained on normal kernel. New physics has kernel center delayed by shift.
+    # New-domain condition is known to the repair operator; all original parameters frozen.
+    assert model.kind in ('lag','dynamic')
+    for p in model.parameters():p.requires_grad_(False)
+    xn,qn=make_data(180,seed+550);yn=target(xn,qn,shift=shift)
+    xv,qv=make_data(160,seed+650);yv=target(xv,qv,shift=shift)
+    xo,qo=make_data(160,seed+750);yo=target(xo,qo)
+    xt,qt=make_data(200,seed+850);yt=target(xt,qt,shift=shift)
+    def loss(x,q,y,d):
+        return ((model(x,q,delta=d)-y)**2).mean()
+    zero=torch.tensor(0.)
+    with torch.no_grad():base_shift=float(loss(xt,qt,yt,zero));old_before=float(loss(xo,qo,yo,zero))
+    # Numerical finite differences and damped Gauss–Newton single step; no test data.
+    # For a correct scalar Jacobian use torch.func.jvp or autograd.functional.jacobian (output vector wrt scalar).
+    eps=torch.tensor(.001)
+    with torch.no_grad():
+        J=((model(xn,qn,delta=eps)-model(xn,qn,delta=-eps))/(2*eps)).detach()
+    resid=(yn-model(xn,qn,delta=zero)).detach()
+    direct=float((J*resid).sum()/(J.square().sum()+.04))
+    variants={}
+    for name,candidates in [('jacobian',[direct*t for t in (.25,.5,1.,1.5)]),('random',list(np.random.default_rng(seed+1900).uniform(-.3,.3,12)))]:
+        scored=[]
+        for val in candidates:
+            val=float(np.clip(val,-.3,.3))
+            with torch.no_grad():v=float(loss(xv,qv,yv,torch.tensor(val)))
+            scored.append((v,val))
+        score,chosen=min(scored)
+        variants[name]=(score,chosen)
+    edit=torch.nn.Parameter(torch.tensor(0.))
+    opt=torch.optim.Adam([edit],lr=.035)
+    best_val=float('inf');best_edit=0.
+    for step in range(70):
+        opt.zero_grad()
+        err=loss(xn,qn,yn,edit)
+        err.backward();opt.step()
+        with torch.no_grad():edit.clamp_(-.3,.3)
+        if (step+1)%5==0:
+            with torch.no_grad():v=float(loss(xv,qv,yv,edit))
+            if v<best_val:best_val=v;best_edit=float(edit.detach())
+    variants['adam']=(best_val,best_edit)
+    with torch.no_grad():base_val=float(loss(xv,qv,yv,zero))
+    results=[]
+    for name,(val,chosen) in variants.items():
+        accepted=val<.995*base_val
+        delta=torch.tensor(chosen if accepted else 0.)
+        with torch.no_grad():shift_mse=float(loss(xt,qt,yt,delta));orig_mse=float(loss(xo,qo,yo,zero))
+        results.append(dict(kind=name,seed=seed,accepted=accepted,delta=float(delta),val_mse=val,test_mse=shift_mse,original_mse=orig_mse))
+    return dict(model_kind=model.kind,seed=seed,true_shift=shift,frozen_shift_test_mse=base_shift,original_test_mse=old_before,repair_results=results,train_diagnostics={'JtJ':float(J.square().sum()),'Jtr':float((J*resid).sum()),'current_mu0':float(model.branch.mu0.detach()) if model.kind=='lag' else None,'current_muq':float(model.branch.muq.detach()) if model.kind=='lag' else None})
+
+def main():
+    os.makedirs('lag_results',exist_ok=True)
+    epochs=int(os.getenv('EPOCHS','30'))
+    train_n=int(os.getenv('TRAIN_N','480'))
+    seeds=SEEDS if os.getenv('QUICK','0')!='1' else [11]
+    summary=[]; repairs=[]
+    for seed in seeds:
+        for kind in ['attention','static','dynamic','ssm','lag']:
+            model,metric=fit(kind,seed,epochs=epochs,train_n=train_n)
+            summary.append(metric)
+            print('Architecture',metric,flush=True)
+            if kind in ('lag','dynamic'):
+                repair=repair_experiment(model,seed)
+                repairs.append(repair)
+                print('Repair',repair,flush=True)
+                torch.save(model.state_dict(),f'lag_results/{kind}_model_seed_{seed}.pt')
+    result=dict(architecture=summary,repair=repairs,conditions={
+        'dataset':'synthetic chirp-like 48-point stream with time-varying causal kernel target',
+        'teacher':TRUE,'memory_lags':L,'samples':N,'training_epochs':epochs,
+        'train_examples':train_n,'seeds':seeds,'limitations':'Generator deliberately shares the lag-kernel structure; this is a matched-bias feasibility test. HF proposals not run.'})
+    with open('lag_results/results.json','w') as f:json.dump(result,f,indent=2)
+    return result
+# Execution is invoked by a later notebook cell
+
+def diagnostic_negative_controls(seed):
+    """Posthoc controls. Uses fitted lag model, never adjusts source-domain weights."""
+    model=Model('lag')
+    try:state=torch.load(f'lag_results/lag_model_seed_{seed}.pt',map_location='cpu',weights_only=True)
+    except TypeError:state=torch.load(f'lag_results/lag_model_seed_{seed}.pt',map_location='cpu')
+    model.load_state_dict(state);model.eval()
+    for p in model.parameters():p.requires_grad_(False)
+    x,q=make_data(160,seed+2700)
+    no_fault=target(x,q,shift=0.)
+    def loss(y,edit):
+        with torch.no_grad():return float(((model(x,q,delta=torch.tensor(float(edit)))-y)**2).mean())
+    candidates=np.linspace(-.25,.25,31)
+    base=loss(no_fault,0.)
+    best=min((loss(no_fault,d),float(d)) for d in candidates)
+    # A frequency shift cannot generally be repaired by translating the kernel center.
+    with torch.no_grad():
+        freq_shift=.6
+        kwargs={**TRUE,'freq':TRUE['freq']+freq_shift}
+        altered=integrate_drive(torch.cumsum(kernel(q,**kwargs)*lag_history(x),-1)[:,:,-1])
+    baseline_freq=loss(altered,0.)
+    best_freq=min((loss(altered,d),float(d)) for d in candidates)
+    return {'seed':seed,'no_fault_baseline_mse':base,
+            'no_fault_best_mse':best[0],
+            'no_fault_best_edit':best[1],
+            'no_fault_false_accept':best[0]<.995*base,
+            'frequency_fault_baseline_mse':baseline_freq,
+            'frequency_fault_best_delay_only_mse':best_freq[0],
+            'frequency_fault_best_delay_edit':best_freq[1],
+            'frequency_fault_true_extra_frequency':freq_shift}
 
 
 # --- V3: unmatched mechanism and ungated matched-budget repair ---
