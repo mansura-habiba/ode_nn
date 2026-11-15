@@ -56,6 +56,43 @@ jobs:
               f.write('| Teacher | Architecture | Test MSE |\n|---|---|---:|\n')
               for r in arch: f.write(f"| {r['family']} | {r['kind']} | {float(r['test_mse']):.5g} |\n")
           PY
+      - name: Extended exploratory benchmark (3 seeds, all 6 families)
+        timeout-minutes: 35
+        run: |
+          python benchmarks/ccnn_falsification/ccnn_generalization_benchmark.py \
+            --profile full --seeds 3 --epochs 12 --steps 20 \
+            --out /tmp/ccnn_v3_extended
+          python - <<'PY'
+          import csv, json, statistics, collections
+          from pathlib import Path
+          p=Path('/tmp/ccnn_v3_extended')
+          a=list(csv.DictReader((p/'architecture.csv').open()))
+          r=list(csv.DictReader((p/'repair.csv').open()))
+          n=list(csv.DictReader((p/'no_defect.csv').open()))
+          assert (len(a),len(r),len(n))==(90,270,90),(len(a),len(r),len(n))
+          by=collections.defaultdict(list)
+          for z in a:by[(z['family'],z['kind'])].append(float(z['test_mse']))
+          methods=collections.defaultdict(list)
+          for z in r: methods[(z['family'],z['method'],int(z['budget']))].append(z)
+          print('EXTENDED_RUN_SUMMARY', json.dumps(dict(
+            architecture_rows=len(a),repair_rows=len(r),no_defect_rows=len(n),
+            test_source_passes=sum(z['independent_source_pass']=='True' for z in r),
+            accepted=sum(z['accepted']=='True' for z in r),
+            no_defect_accepts=sum(z['accepted']=='True' for z in n),
+            seeds=sorted({int(z['seed']) for z in a}),
+            families=sorted({z['family'] for z in a})
+          ),sort_keys=True))
+          print('EXTENDED_ARCHITECTURE_MSE')
+          for family in sorted({x[0] for x in by}):
+            print(family, ' '.join(f'{kind}={statistics.mean(by[(family,kind)]):.6g}' for kind in ('attention','static','dynamic','ssm','lag')))
+          print('EXTENDED_REPAIR_MSE_56')
+          for family in sorted({x[0] for x in methods}):
+            print(family,' '.join(f'{kind}={statistics.mean(float(z["shifted_after"]) for z in methods[(family,kind,56)]):.6g}' for kind in ('structured','spectral','full')))
+          with (p/'evaluation_summary.json').open('w') as out:
+            json.dump({'architecture':{f'{fam}/{kind}':statistics.mean(values) for (fam,kind),values in by.items()},
+                       'count':{'architecture':len(a),'repair':len(r),'no_defect':len(n)},
+                       'source_passes':sum(z['independent_source_pass']=='True' for z in r)},out,indent=2)
+          PY
       - name: Upload execution evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,4 +101,5 @@ jobs:
           path: |
             /tmp/ccnn_v3_fast
             /tmp/ccnn_v3_fast_summary.md
+            /tmp/ccnn_v3_extended
           if-no-files-found: warn
