@@ -4,7 +4,7 @@ The design follows the visual grammar of [Habiba & Pearlmutter, *Continuous Conv
 
 ## Figure 1 — model and falsification controls
 
-\`\`\`mermaid
+```mermaid
 flowchart LR
     X["Observed history\nx(t), condition q(t)"] --> H["Causal field\nH(t,τ)=x(t−τ)"]
     X --> A["Shared attention\nAϕ(x,q)"]
@@ -17,7 +17,7 @@ flowchart LR
     A --> Y
     classDef proposed fill:#dbeafe,stroke:#2459a6,color:#102d59
     class K,P,M,O proposed
-\`\`\`
+```
 
 The lag direction τ and physical time t are **different**: a lag-accumulation PDE integrates causal history at each observation instant, and an ODE evolves the response across physical time. In the present discrete benchmark, the lag PDE is evaluated by cumulative quadrature; the ODE uses exponential leaky-state time stepping. **Do not advertise this as an adaptive-solver Neural ODE**. Irregular time grids and solver-tolerance/NFE experiments belong to the next study.
 
