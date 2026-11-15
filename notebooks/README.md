@@ -2,6 +2,8 @@
 
 > **Research direction (read first):** [CCNN × attention × verified weight-space repair — unified research charter](RESEARCH_QUESTIONS_CCNN_ATTENTION_WEIGHT_REPAIR.md). This charter defines the invariant goal, RQ1–RQ9, falsifiable hypotheses, toy-study decisions, baseline obligations, and the Research Identity Record required before new experiments. No more research-question drift or notebook proliferation without an explicit question and evidence gate.
 
+> **15 November 2026 — scientific correction:** The original CCNN paper is primarily about a **causal time-lag convolution encoded through a coupled PDE–ODE**, not the spatial diffusion operator used in our exploratory RQ4 toy. The [research charter](RESEARCH_QUESTIONS_CCNN_ATTENTION_WEIGHT_REPAIR.md) now distinguishes the original lag-kernel mechanism (RQ1-M, RQ6-M) from the later spatial-operator extension. Negative diffusion-stencil results do not refute the original CCNN. The next method-level questions are whether the lag kernel **complements attention** and enables **structured, verified kernel-weight repair**.
+
 This directory is the canonical location for research notebooks in `ode_nn`. Updates to the music PDE–ODE and PCWSR studies should be committed here, preserving a reviewable change history.
 
 ## Current RQ4 study — spatial-resolution transfer (15 November 2026)
@@ -64,3 +66,10 @@ Subsequent notebooks should be added to this directory, using manuscript-style t
 - **[Music PCWSR/WSP mechanistic audit V3](Music_PCWSR_HF_WSP_Mechanistic_Audit_V3_Colab.ipynb)** — evaluates three open-weight instruction models proposing edits to frozen music convolution weights. New controls deliberately permute the training residual projection or generate random bounded edits, testing diagnostic sensitivity without using those controls for candidate selection. It cites the critical empirical audit [Ahmed, arXiv:2611.08070v1](https://arxiv.org/abs/2611.08070), alongside [Hu et al., arXiv:2611.09382](https://arxiv.org/abs/2611.09382) and Takehi et al.
 
 **Read the V3 notebooks first for new research.** The four V2 notebooks remain for reproducibility and historical comparisons. The original eight-frame plot does not show a coupled-model advantage; V3 is a new hypothesis, **not** a prevalidated improvement. All pretrained-model errors, invalid WSP proposals and negative outcomes must be retained in exported metrics.
+
+## Original temporal toy: GitHub archive
+
+- [Attention + CCNN temporal-extrapolation Colab](CCNN_Attention_Toy_Theory_Test_Colab.ipynb)
+- [Standalone reproducible PyTorch runner](ccnn_attention_toy.py)
+
+These are archival **spatial-diffusion toy experiments**, not a faithful evaluation of the original paper's time-lag convolution. Interpret their positive and negative observations only within those synthetic generators.
