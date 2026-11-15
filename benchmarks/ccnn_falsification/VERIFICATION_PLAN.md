@@ -76,11 +76,22 @@ flowchart TD
 
 **Merge rule:** the four draft PRs may merge as tested components but the research project cannot pass the experimental gates until #9/#11/#12/#13 are complete. If CI runs but not scientific gates, keep the issue open and report *implemented/verified module only*. No new comparison results on the old V3 shifted-target design will be called mechanism-specific evidence.
 
-## Execution environment: Google Colab + GitHub Actions
+## Execution environment: manually operated Google Colab + GitHub Actions
 
-**Preferred experimental compute:** official remote Colab MCP server at `https://colaboratory.googleapis.com/mcp` (Google OAuth connection required); do not assume access or GPU entitlement until the user connects it. Google documents `list_runtime_specs`, `list_runtimes`, `create_runtime`, `create_session`, `execute_code` and session cleanup. Reuse existing eligible runtime and a dedicated session per concurrent job; avoid starting unnecessary runtimes.
+**Execution ownership:** The researcher will manually open and run the Colab notebook. **No Colab MCP connection is required or planned.** Use GitHub Actions for repeatable CI invariants and CPU evaluation. Keep Colab training separate from scientific acceptance decisions.
 
-**Fallback and reproducibility check:** GitHub Actions runs all CPU invariants, short pipeline tests, and independent evaluation. Use the same pinned dependency lock and container spec; for a GPU confirmatory run, Colab may compute results, but GitHub receives code, CI verification, CSV/JSON manifests, checkpoint hashes and data provenance. **Do not upload credentials or token-bearing Colab runtime metadata.**
+**Manual Colab execution checklist (researcher):**
+1. In Google Colab choose **File → Open notebook → GitHub**; authorize GitHub access if prompted. Open the **research branch**, not the old `master` experiment: `notebooks/CCNN_Unmatched_Kernels_Gatefree_Repair_V3_Colab.ipynb` at [V3 notebook](../../notebooks/CCNN_Unmatched_Kernels_Gatefree_Repair_V3_Colab.ipynb). Because the repository is private, GitHub authorization may be required.
+2. Choose a hardware accelerator only if needed for the workload. In a new cell, print `torch.__version__`, `torch.cuda.is_available()`, `torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"`, and the seed; save these to the run manifest.
+3. Verify the notebook uses the exact intended research Git commit, and install pinned dependencies where required. Do not assume opening an old Colab copy automatically pulls current branch edits.
+4. **Smoke only:** run a tiny test to confirm execution and artifacts. Do not label those numbers research evidence.
+5. **Scientific run only after issues #5/#6/#7/#9/#10/#11/#12/#13 pass:** run frozen-protocol RQ1 or RQ6 experiments using independent train/validation/calibration/test splits and appropriately tuned models. The existing V3 teacher-shift repair notebook is **not** an approved primary RQ6 scientific experiment.
+6. Export `experiment_manifest.json`, full seed-level CSVs, validation/test decision ledger, and separately rendered figures; capture whether every cell ran and any failures. Save results to the designated Google Drive folder or upload to the GitHub research evidence branch. **Never commit API keys, OAuth credentials, model tokens, or private user data.**
+7. Link the resulting Colab notebook copy / Drive artifact location and run manifest in issues #4, #15 and the relevant research PR. GitHub-based verification is still required before promoting a result from exploratory to confirmatory.
+
+**Assistant responsibilities:** prepare audited source code, versioned experiment configs, CI invariants, analysis scripts, issue updates and artifact inspection. **Researcher responsibilities:** run Colab manually, select hardware, confirm execution and share the output manifest or links. No Colab OAuth or remote runtime permission is requested.
+
+**Reproducibility check:** GitHub Actions runs the same unit and leakage checks, then audits exported Colab artifacts, checkpoint hashes and protocol/code provenance. Reproduction on CPU or a separate Colab session should be attempted where computationally feasible.
 
 **Run outputs:**
 - `experiment_manifest.json`: code SHA, preregistration SHA, dataset family and split SHA, seed, method, hyperparameter trials, runtime device, package versions, timestamps, and compute.
@@ -91,7 +102,7 @@ flowchart TD
 
 ## Immediate operational checklist
 
-- [ ] Connect official Colab MCP to ChatGPT, authenticate and verify `list_runtime_specs` / `list_runtimes`; if unavailable, use local/GitHub Actions CPU.
+- [ ] Researcher manually opens the correct research-branch Colab notebook, runs the device/environment check, and records a reproducible run manifest. **No MCP setup.**
 - [ ] Merge CI-valid component PRs #17–#20 into the research integration branch, keeping all original issues open until fully verified.
 - [ ] Implement cross-module integration checks in #13 and an execution configuration for matched RQ1 experiments.
 - [ ] Implement source-checkpoint adequacy (#9), fault-specific repair versus placebo (#11–#12).
