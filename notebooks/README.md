@@ -1,5 +1,7 @@
 # Executable research notebooks
 
+> **Research direction (read first):** [CCNN × attention × verified weight-space repair — unified research charter](RESEARCH_QUESTIONS_CCNN_ATTENTION_WEIGHT_REPAIR.md). This charter defines the invariant goal, RQ1–RQ9, falsifiable hypotheses, toy-study decisions, baseline obligations, and the Research Identity Record required before new experiments. No more research-question drift or notebook proliferation without an explicit question and evidence gate.
+
 This directory is the canonical location for research notebooks in `ode_nn`. Updates to the music PDE–ODE and PCWSR studies should be committed here, preserving a reviewable change history.
 
 ## Current studies
