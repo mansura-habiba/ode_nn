@@ -1,4 +1,4 @@
-name: CCNN paper-style notebook smoke execution
+name: CCNN paper-style Zoology MQAR notebook protocol check
 
 on:
   push:
@@ -19,17 +19,17 @@ permissions:
 jobs:
   notebook-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install test dependencies (CPU)
+      - name: Install deterministic CPU smoke dependencies
         run: |
           python -m pip install numpy pandas matplotlib nbformat nbclient ipykernel
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - name: Verify research sections and execute whole notebook
+      - name: Execute pinned official Zoology MQAR generator and entire notebook
         env:
           MPLBACKEND: Agg
         run: |
@@ -37,40 +37,51 @@ jobs:
           import nbformat
           from nbclient import NotebookClient
           from pathlib import Path
+          import json,pandas as pd
           path=Path('notebooks/CCNN_Attention_Weight_Space_Repair_Paper_Colab.ipynb')
           nb=nbformat.read(path,as_version=4)
-          md='\n'.join(''.join(c.source) for c in nb.cells if c.cell_type=='markdown')
-          for heading in ('Abstract','Research question','Source basis and proposed method',
-                          'Experimental design','Results I','Results II','Discussion','References'):
-              assert heading.lower() in md.lower(),f'Missing paper section: {heading}'
-          assert 'FAST_MODE = True' in '\n'.join(c.source for c in nb.cells if c.cell_type=='code')
-          client=NotebookClient(nb,timeout=1200,kernel_name='python3',allow_errors=False)
-          client.execute(cwd='.')
-          cells=[c for c in nb.cells if c.cell_type=='code']
-          print('NOTEBOOK_CODE_CELLS',len(cells),'COMPLETED',sum(c.execution_count is not None for c in cells))
-          assert all(c.execution_count is not None for c in cells)
-          out=Path('ccnn_attention_repair_paper_outputs')
-          required=['attention_results.csv','repair_results.csv','fault_calibration.csv',
-                    'experiment_manifest.json','Figure_01_Attention_Augmentation.png',
-                    'Figure_02_Repair_Tradeoff.png']
-          for file in required: assert (out/file).is_file(),f'missing {file}'
-          import json,pandas as pd
+          md='\n'.join(c.source for c in nb.cells if c.cell_type=='markdown')
+          for heading in ('Abstract','Research question','Source basis','Published',
+                          'Experimental','Results A','Results B','Discussion','Primary source references'):
+              assert heading.lower() in md.lower(),f'Missing scientific section: {heading}'
+          code='\n'.join(c.source for c in nb.cells if c.cell_type=='code')
+          assert 'MODE = "SMOKE"' in code
+          assert 'https://raw.githubusercontent.com/HazyResearch/zoology/' in code
+          assert 'official_mqar' in code and 'PUBLISHED_TRAIN' in code
+          assert 'test_labels' not in code or 'oracle' in md.lower()
+          executed=NotebookClient(nb,timeout=1200,kernel_name='python3',allow_errors=False).execute(cwd='.')
+          cells=[c for c in executed.cells if c.cell_type=='code']
+          assert len(cells)>=7 and all(c.execution_count is not None for c in cells)
+          out=Path('ccnn_zoology_paper_outputs')
+          required=['architecture_per_configuration.csv','learning_curves.csv',
+                    'fault_calibration.csv','repair_per_method.csv',
+                    'experiment_manifest.json','Figure_01_Official_MQAR_Recall.png',
+                    'Figure_02_Repair_Preservation.png']
+          for name in required:assert (out/name).is_file(),f'Missing {name}'
           manifest=json.loads((out/'experiment_manifest.json').read_text())
-          assert manifest['confirmatory'] is False
-          a=pd.read_csv(out/'attention_results.csv')
-          b=pd.read_csv(out/'repair_results.csv')
-          assert len(a)==3 and len(b)==8,(len(a),len(b))
-          assert set(a.model)=={'attention','ccnn','fir'}
-          print('SMOKE_RESULT_SUMMARY',{'architecture_rows':len(a),'repair_rows':len(b),
-                 'statuses':b.status.value_counts().to_dict(),'manifest_status':manifest['evidence_status']})
-          nbformat.write(nb,'ccnn_paper_notebook_executed.ipynb')
+          assert manifest['official_zoology_revision']=='1ad20d193b6113cae1e8f3c655c300d7b4b3f4bb'
+          assert manifest['canonical_mqar_generator'] is True
+          assert manifest['scientifically_validated'] is False
+          assert manifest['status']=='engineering_smoke'
+          assert len(manifest['published_train_specs'])==5 and len(manifest['published_test_specs'])==7
+          a=pd.read_csv(out/'architecture_per_configuration.csv')
+          b=pd.read_csv(out/'repair_per_method.csv')
+          assert len(a)==6 and len(b)==8,(len(a),len(b))
+          assert set(a.kind)=={'attention','ccnn','fir'}
+          assert all(b.status=='engineering_smoke'), "Smoke must not report repair efficacy"
+          print('OFFICIAL_ZOOLOGY_PROTOCOL_SMOKE',json.dumps(dict(
+              code_cells=len(cells),architecture_rows=len(a),repair_rows=len(b),
+              upstream_commit=manifest['official_zoology_revision'],
+              generator_hash=manifest['upstream_generator_sha256'],
+              evidence=manifest['status']),sort_keys=True))
+          nbformat.write(executed,'ccnn_zoology_executed_smoke.ipynb')
           PY
-      - name: Archive smoke evidence (not scientific claims)
+      - name: Archive smoke artifacts (not scientific findings)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ccnn-paper-style-notebook-smoke
+          name: ccnn-zoology-official-generator-smoke
           path: |
-            ccnn_attention_repair_paper_outputs/
-            ccnn_paper_notebook_executed.ipynb
+            ccnn_zoology_paper_outputs/
+            ccnn_zoology_executed_smoke.ipynb
           if-no-files-found: warn
