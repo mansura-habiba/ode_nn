@@ -80,6 +80,44 @@ For repair, V3 **freezes the source attention–CCNN model** and tests shared, u
 
 The supplied four-panel illustration maps to **(A)** original theory, **(B)** implemented V3 surrogate, **(C)** proposed shared-weight repair comparisons, and **(D)** decisive planned falsification tests. Unmatched kernel families and independent-domain evaluation are in V3; loss-landscape trajectories are a **planned measurement**, not an observed empirical figure. See the companion architecture for the equations, Mermaid diagrams, explicit repair-budget table and evidence boundary.
 
+## 2.4 Four-panel architecture figures: validation and interpretation
+
+The supplied composite figure has been separated into panels A–D for independent study. The repository embeds **validated, redrawn SVG versions** below (rather than presenting the original schematic as quantitative evidence). The original user-provided raster was cropped separately; the redrawn SVGs incorporate clarified notation and scientific status labels.
+
+### Figure A — Original coupled lag PDE–ODE (source theory)
+
+![Figure A: Original coupled causal lag PDE–ODE](figures/A_original_lag_theory.svg)
+
+**Interpretation.** The historical trajectory enters a time-varying causal kernel. Integrating along lag `τ` gives the cumulative field `u(t,τ)`; its terminal lag response `u(t,T)` drives temporal ODE evolution. This is a history-delay formulation rather than a spatial reaction–diffusion model.
+
+**Validation of supplied panel A:** the original mathematical boundary condition should be **`u(t,0)=0`**, not an interchange of `t` and `τ` such as `u(0,t)=0`. The partial derivative is in the **lag coordinate `τ`**, while the ODE evolves in physical time `t`. The closed delayed-feedback formulation depends on access to `y(t−τ)`; V3 substitutes observed `x` history and does not implement a Markovized history-transport PDE. Kernel curves in the supplied artwork are illustrative.
+
+### Figure B — Implemented V3 attention-augmented surrogate
+
+![Figure B: V3 discrete architecture](figures/B_v3_discrete_architecture.svg)
+
+**Interpretation.** V3 constructs `H(t,j)=x(t−j)` with zero-padding, calculates a query-conditioned, 14-lag normalized kernel, accumulates the elementwise product by `torch.cumsum`, and uses the final lag index to drive a leaky latent state. The attention path consumes `x,q,t,t²`. The prediction adds attention to a learned-amplitude branch response.
+
+**Validation of supplied panel B:** the cumulative sum is a **fixed-grid discretization**, not proof of a continuous-time solver or irregular-timestamp support. The actual branch includes a learnable kernel-response gain **and** a learned fusion coefficient. The update uses `α=1−exp(−8/N)` and `tanh(2m)` in V3; the generic drawing's `φ` and `g` notation abstracts this. A lag quadrature in physical units would require explicit `Δτ` treatment.
+
+### Figure C — Shared ungated repair
+
+![Figure C: Gate-free shared repair](figures/C_gatefree_repair.svg)
+
+**Interpretation.** Repair compares parameterized edit surfaces acting on **one identical frozen CCNN**. The corrected kernel is shared across original and shifted populations. Candidates are selected using shifted validation improvement **and** source validation retention; held-out source and shifted tests are evaluated independently.
+
+**Validation of supplied panel C:** the pre/post kernel silhouettes are **schematic**, not necessarily trained or recovered kernels. V3 permits structured, spectral, low-rank and full lag-by-query corrections. The pure mechanism edit has at most five kernel parameters; for budgets above five the so-called structured method is actually **structured + spectral residual**. Equal counts of trainable scalars alone do not establish equal functional repair capacity. There is **no repair-domain gate** (the model's existing scalar attention-fusion multiplier is unrelated).
+
+### Figure D — Decisive controls and planned geometry study
+
+![Figure D: Falsification tests and planned diagnostics](figures/D_decisive_tests.svg)
+
+**Interpretation.** The first test asks whether the structured inductive bias helps on *unmatched* kernels. The second holds the frozen model and explicit trainable-parameter budget fixed across adapter families. The third would inspect validation-loss surfaces, curvature and optimization paths, alongside source-preservation boundaries, to understand whether an apparent repair advantage reflects favorable geometry or capacity.
+
+**Validation of supplied panel D:** its multipeak, oscillator, long-range kernel sketches and colored 3-D landscape are **conceptual**, not measurements from V3. V3 currently includes bimodal, boxcar, damped-oscillator, switching and feedback-ODE teachers but **not a dedicated fractional/power-law teacher**. The loss-surface/path diagnostic is **planned** and cannot be presented as observed results. Matching scalar count does not automatically match time, FLOPs, tangent-space expressivity or optimizer conditioning.
+
+**Figure caption / provenance:** Figures A–D are publication-style *architecture schematics*, reconstructed and corrected from the user-supplied composite. They document source theory, concrete V3 code and registered next tests. None plots experimental superiority; quantitative illustrations must be replaced with measured, manifest-linked results prior to publication.
+
 ## 3. Research hypotheses and prior-defined evaluation
 
 - **H-A: attention augmentation.** A structured lag kernel may outperform attention alone and comparably sized static/dynamic convolution and exponential-memory controls on a changing-delay matched-filter task.
