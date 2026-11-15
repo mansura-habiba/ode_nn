@@ -56,7 +56,8 @@ jobs:
               f.write('| Teacher | Architecture | Test MSE |\n|---|---|---:|\n')
               for r in arch: f.write(f"| {r['family']} | {r['kind']} | {float(r['test_mse']):.5g} |\n")
           PY
-      - name: Extended exploratory benchmark (3 seeds, all 6 families)
+      - name: Extended exploratory benchmark (manual opt-in, historically confounded)
+        if: github.event_name == 'workflow_dispatch'
         timeout-minutes: 35
         run: |
           python benchmarks/ccnn_falsification/ccnn_generalization_benchmark.py \
