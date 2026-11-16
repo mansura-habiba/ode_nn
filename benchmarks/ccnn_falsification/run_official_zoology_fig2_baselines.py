@@ -166,7 +166,25 @@ def main(argv=None):
     module = importlib.import_module("zoology.train")
     originals = module.WandbLogger
     original_prepare_data = module.prepare_data
-    active_run = {"id": None, "path": None}
+    original_validation = module.Trainer.test
+    active_run = {"id": None, "path": None,
+                  "best_validation_loss": float("inf"), "best_epoch": None,
+                  "checkpoint": None}
+    completed = []
+
+    def select_validation_checkpoint(trainer, epoch_idx):
+        # Native Zoology test() receives our frozen VALIDATION loader, not TEST.
+        # Intercept its validation result to store the best checkpoint.
+        result = original_validation(trainer, epoch_idx)
+        metric = float(result["valid/loss"])
+        if metric < active_run["best_validation_loss"]:
+            active_run["best_validation_loss"] = metric
+            active_run["best_epoch"] = int(epoch_idx + 1)
+            checkpoint = out / f"{active_run['id']}.best_val_state.pt"
+            import torch
+            torch.save({k: v.detach().cpu() for k,v in trainer.model.state_dict().items()},checkpoint)
+            active_run["checkpoint"] = str(checkpoint)
+        return result
 
     def prepare_shared_data(_config):
         train_dl, train_hash = frozen_dataloader(
@@ -189,6 +207,9 @@ def main(argv=None):
             self.path = out / f"{self.run_id}.csv"
             active_run["id"] = self.run_id
             active_run["path"] = str(self.path)
+            active_run["best_validation_loss"] = float("inf")
+            active_run["best_epoch"] = None
+            active_run["checkpoint"] = None
 
         def log_config(self, config):
             pass
@@ -213,6 +234,7 @@ def main(argv=None):
 
     module.WandbLogger = MetricsCSV
     module.prepare_data = prepare_shared_data
+    module.Trainer.test = select_validation_checkpoint
     try:
         for selected_cfg in selected:
             cfg = copy.deepcopy(selected_cfg)
@@ -293,11 +315,74 @@ def main(argv=None):
                     "epoch/LR selection in this baseline-runner phase."
                 )
                 report["locked_test_evaluated"] = False
+                report["best_validation_loss"] = (
+                    active_run["best_validation_loss"]
+                    if active_run["checkpoint"] else None
+                )
+                report["best_validation_epoch"] = active_run["best_epoch"]
+                report["validation_checkpoint"] = active_run["checkpoint"]
                 meta.write_text(json.dumps(report, indent=2))
+                if report["status"] == "COMPLETED" and active_run["checkpoint"]:
+                    completed.append({"config":copy.deepcopy(cfg),
+                                      "manifest": str(meta),
+                                      "checkpoint": active_run["checkpoint"],
+                                      "validation_loss": active_run["best_validation_loss"]})
                 print("SAVED", str(meta), "status", report["status"], flush=True)
     finally:
         module.WandbLogger = originals
         module.prepare_data = original_prepare_data
+        module.Trainer.test = original_validation
+
+    # Select the BEST LR/epoch by validation loss alone. Only then open
+    # the locked test split, exactly once for the selected candidate.
+    if not completed:
+        raise RuntimeError("No completed validation-selected Zoology checkpoint")
+    winner = min(completed, key=lambda record: record["validation_loss"])
+    torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    native = module.LanguageModel(winner["config"].model).to(torch_device)
+    native.load_state_dict(torch.load(winner["checkpoint"], map_location="cpu",
+                                      weights_only=True))
+    native.eval()
+    test_dl, test_hash = frozen_dataloader(
+        snapshot_dir, args.seed, "test", args.sequence_length,
+        CONDITIONS[args.sequence_length], args.batch_size)
+    assert test_hash == split_proofs["test"]
+    import torch.nn.functional as F
+    correct = total = 0
+    loss_sum = 0.0
+    with torch.no_grad():
+        for token_ids, target_ids, _ in test_dl:
+            token_ids = token_ids.to(torch_device)
+            target_ids = target_ids.to(torch_device)
+            label_mask = target_ids != -100
+            logits = native(token_ids)[label_mask]
+            labels = target_ids[label_mask]
+            correct += int((logits.argmax(-1) == labels).sum().item())
+            total += int(labels.numel())
+            loss_sum += float(F.cross_entropy(
+                logits.float(), labels, reduction="sum").item())
+    if total == 0:
+        raise RuntimeError("Locked MQAR test has no supervised queries")
+    report_path = Path(winner["manifest"])
+    report = json.loads(report_path.read_text())
+    report["locked_test_evaluated"] = True
+    report["locked_test_accuracy"] = correct / total
+    report["locked_test_nll"] = loss_sum / total
+    report["locked_test_supervised_queries"] = total
+    report["selected_by"] = "minimum validation loss across learning rates and epochs"
+    report["selected_validation_loss"] = winner["validation_loss"]
+    report["selected_lr"] = float(winner["config"].learning_rate)
+    report["selected_checkpoint"] = winner["checkpoint"]
+    report_path.write_text(json.dumps(report, indent=2))
+    summary = {k: report[k] for k in (
+        "original_model_name", "sequence_length", "pairs", "width", "seed",
+        "selected_lr", "selected_validation_loss",
+        "locked_test_accuracy", "locked_test_nll", "locked_test_supervised_queries"
+    )}
+    (out / f"locked_test_{args.model}_L{args.sequence_length}_d{args.width}_seed{args.seed}.json").write_text(
+        json.dumps(summary, indent=2))
+    print("VALIDATION_SELECTED_LOCKED_TEST", json.dumps(summary, sort_keys=True),
+          flush=True)
 
 
 if __name__ == "__main__":
