@@ -1,0 +1,154 @@
+{
+  "schema_version": "1.0",
+  "registration_status": "DRAFT_NOT_FROZEN",
+  "research_goal": "Improve attention with CCNN lag-memory; evaluate non-regressive model-weight repair",
+  "evidence_levels": [
+    "proposed",
+    "implemented",
+    "smoke_tested",
+    "exploratory",
+    "confirmatory",
+    "independently_replicated"
+  ],
+  "confirmatory_gate": "registration_status must be FROZEN_PRE_RUN before confirmatory evaluation; confirmatory test data must remain locked",
+  "tasks": {
+    "RQ1-M": {
+      "mechanism": "incremental CCNN causal lag memory alongside a shared attention backbone",
+      "hypothesis": "CCNN improves the unmatched-family paired test error versus strongest predeclared non-CCNN competitor at comparable budget",
+      "primary_metric": "seed-paired held-out MSE difference; lower is better",
+      "required_controls": [
+        "attention_only",
+        "static_fir",
+        "affine_dynamic_fir",
+        "mlp_dynamic_fir",
+        "ssm",
+        "generic_neural_ode"
+      ],
+      "positive_calibration_only": [
+        "matched_chirp"
+      ],
+      "primary_families": [
+        "bimodal",
+        "boxcar",
+        "damped_oscillator",
+        "switching",
+        "feedback_ode"
+      ],
+      "benchmark_arms": [
+        "frozen_backbone_residual_only",
+        "joint_training"
+      ],
+      "negative_controls": [
+        "no_conditional_memory",
+        "shuffled_query",
+        "randomized_lag_assignment"
+      ],
+      "reporting": [
+        "per_family_seed_results",
+        "paired_effect_size",
+        "paired_confidence_interval",
+        "compute_accuracy_pareto",
+        "negative_outcomes"
+      ]
+    },
+    "RQ6-M": {
+      "mechanism": "blinded repair of actual model-weight corruption from a fixed clean checkpoint, not teacher-label alteration",
+      "target_labels_fixed": true,
+      "corrupted_object": "model_parameter",
+      "no_domain_gate": true,
+      "minimum_abs_fault_headroom_mse": 0.001,
+      "minimum_relative_fault_headroom": 0.1,
+      "primary_metric": "fault-specific excess improvement over no-fault placebo subject to independently tested source preservation",
+      "required_controls": [
+        "no_edit",
+        "placebo_continued_adam",
+        "structured_edit",
+        "tangent_edit",
+        "sparse_adam",
+        "gauss_newton",
+        "selective_kalman",
+        "low_rank",
+        "full_fir",
+        "full_finetune"
+      ],
+      "allowable_updated_parameter_budgets": [
+        1,
+        5,
+        18,
+        36,
+        56
+      ],
+      "preservation_max_relative_degradation": 0.1,
+      "preservation_max_absolute_degradation_mse": 0.0001,
+      "maximum_false_positive_no_fault_rate": 0.05,
+      "negative_controls": [
+        "no_fault",
+        "wrong_family",
+        "random_equal_norm_corruption",
+        "random_repair_surface",
+        "identical_input_contradictory_label_impossibility_only"
+      ],
+      "diagnostics": [
+        "clean_checkpoint_hash",
+        "faulted_checkpoint_hash",
+        "fault_headroom",
+        "fault_improvement",
+        "placebo_improvement",
+        "specificity_excess",
+        "source_drift",
+        "test_preservation_pass",
+        "accepted_edit_status"
+      ],
+      "fault_oracle_visibility": "evaluator_only; never available to repair methods"
+    }
+  },
+  "sample_splits": {
+    "train_seed_offset": 100,
+    "validation_seed_offset": 200,
+    "calibration_seed_offset": 250,
+    "locked_test_seed_offset": 300,
+    "strictly_disjoint_ids": true,
+    "locked_test_usage": "evaluation_only_no_checkpoint_fault_amplitude_hyperparameter_or_edit_selection"
+  },
+  "confirmatory": {
+    "paired_seed_ids": [
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110
+    ],
+    "primary_confidence_interval": "paired bootstrap 95% across independent model/data seeds",
+    "report_all_failures": true,
+    "decision": "No superiority claim if matched strong competitor dominates error and cost, no placebo-specific improvement, or source preservation fails"
+  },
+  "fairness": {
+    "comparable_trainable_parameters": true,
+    "comparable_compute_and_hyperparameter_trials": true,
+    "record_train_runtime": true,
+    "record_inference_runtime": true,
+    "record_optimizer_steps": true,
+    "record_data_accesses": true
+  },
+  "dependencies": {
+    "charter": "notebooks/archive/RESEARCH_QUESTIONS_CCNN_ATTENTION_WEIGHT_REPAIR.md",
+    "protocol": "papers/CCNN_Mechanism_Isolation_Experimental_Protocol.md",
+    "issues": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      15
+    ]
+  }
+}

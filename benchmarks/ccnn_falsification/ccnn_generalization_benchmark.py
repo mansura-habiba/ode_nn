@@ -329,6 +329,7 @@ class UngatedAdapter(nn.Module):
         super().__init__()
         self.frozen=frozen;self.method=method;self.budget=budget
         allowed={'structured':(1,5,18,36,56),
+                 'tangent':(1,5),
                  'spectral':(1,5,18,36,56),
                  'rank1':(18,), 'rank2':(36,), 'full':(56,)}
         assert budget in allowed[method]
@@ -348,6 +349,18 @@ class UngatedAdapter(nn.Module):
             dw=torch.einsum('n,nlf->lf',e[5:],self.dct[:len(e)-5])
         else:
             k=kernel(q,b.mu0,b.muq,b.logsigma,b.freq,b.chirp)
+            if self.method=='tangent':
+                # Same local CCNN function-space tangent directions, not arbitrary FIR taps.
+                pars=(b.mu0,b.muq,b.logsigma,b.freq,b.chirp)
+                eps=1e-3
+                d_k=torch.zeros_like(k)
+                for i in range(len(e)):
+                    plus=list(pars);minus=list(pars)
+                    plus[i]=pars[i]+eps;minus[i]=pars[i]-eps
+                    direction=(kernel(q,*plus)-kernel(q,*minus))/(2*eps)
+                    d_k=d_k+e[i]*direction
+                raw=k+d_k
+                return raw/(raw.square().sum(-1,keepdim=True).sqrt()+1e-7)
             if self.method=='spectral':
                 dw=torch.einsum('n,nlf->lf',e,self.dct[:len(e)])
             elif self.method=='full':
@@ -373,12 +386,14 @@ def ungated_predict(base,x,q,adapter=None):
 def gatefree_repair(base,family,seed,method,budget,steps=85,shift=.12):
     global CURRENT_FAMILY
     CURRENT_FAMILY=family
+    # Pair domain inputs, allowing source and shifted targets to conflict.
+    # Train/validation/test splits are still statistically independent.
     x1,q1=make_data(128,seed+311); y1=target(x1,q1)
-    x2,q2=make_data(128,seed+411); y2=target(x2,q2,shift=shift)
+    x2,q2=x1,q1; y2=target(x2,q2,shift=shift)
     vx1,vq1=make_data(160,seed+511); vy1=target(vx1,vq1)
-    vx2,vq2=make_data(160,seed+611); vy2=target(vx2,vq2,shift=shift)
+    vx2,vq2=vx1,vq1; vy2=target(vx2,vq2,shift=shift)
     tx1,tq1=make_data(240,seed+711); ty1=target(tx1,tq1)
-    tx2,tq2=make_data(240,seed+811); ty2=target(tx2,tq2,shift=shift)
+    tx2,tq2=tx1,tq1; ty2=target(tx2,tq2,shift=shift)
     error=lambda x,q,y,adapter:((ungated_predict(base,x,q,adapter)-y)**2).mean()
     with torch.no_grad():
         source_before=float(error(tx1,tq1,ty1,None))
@@ -512,14 +527,16 @@ def benchmark_cli(argv=None):
     parser.add_argument('--seeds',type=int,default=None)
     parser.add_argument('--epochs',type=int,default=None)
     parser.add_argument('--steps',type=int,default=None)
+    parser.add_argument('--shift',type=float,default=.12)
     args=parser.parse_args(argv)
+    if args.shift<0:parser.error('--shift must be nonnegative')
     smoke=args.profile=='smoke'
     seeds=list(range(11,11+(args.seeds or (1 if smoke else 10))))
     families=FAMILIES[:3] if smoke else FAMILIES
     epochs=args.epochs or (10 if smoke else 35)
     steps=args.steps or (15 if smoke else 85)
     out=Path(args.out);out.mkdir(parents=True,exist_ok=True)
-    arms=[('structured',1),('spectral',1),('structured',5),('spectral',5),
+    arms=[('structured',1),('tangent',1),('spectral',1),('structured',5),('tangent',5),('spectral',5),
           ('structured',18),('spectral',18),('rank1',18),
           ('structured',36),('spectral',36),('rank2',36),
           ('structured',56),('spectral',56),('full',56)]
@@ -530,7 +547,7 @@ def benchmark_cli(argv=None):
         for fam in families:
             CURRENT_FAMILY=fam
             models={}
-            for kind in ('attention','dynamic','lag'):
+            for kind in ('attention','static','dynamic','ssm','lag'):
                 model,metrics=fit(kind,seed,epochs=epochs,train_n=(192 if smoke else 480))
                 models[kind]=model
                 architecture.append(dict(family=fam,**metrics))
@@ -538,10 +555,10 @@ def benchmark_cli(argv=None):
             base=models['lag']
             for p in base.parameters():p.requires_grad_(False)
             for kind,budget in arms:
-                row=gatefree_repair(base,fam,seed,kind,budget,steps=steps)
+                row=gatefree_repair(base,fam,seed,kind,budget,steps=steps,shift=args.shift)
                 repairs.append(row)
                 print(f'Repair {fam}/{kind}/{budget}: shifted={row["shifted_after"]:.5g} source={row["source_after"]:.5g}',flush=True)
-            for kind,budget in (('structured',1),('spectral',5),('rank1',18),('full',56)):
+            for kind,budget in (('structured',1),('tangent',1),('spectral',5),('rank1',18),('full',56)):
                 no_defect.append(gatefree_repair(base,fam,seed,kind,budget,steps=steps,shift=0.))
     csv_write(out/'architecture.csv',architecture)
     csv_write(out/'repair.csv',repairs)
@@ -551,7 +568,9 @@ def benchmark_cli(argv=None):
         epochs=epochs,steps=steps,seed_count=len(seeds),no_domain_gate=True,
         preservation_rule='validation source <= baseline*1.10+0.0001',
         selection='shifted val with original val constraint; test excluded',
-        matched_budget=[1,5,18,36,56],negative_control='shift=0',
+        matched_budget=[1,5,18,36,56],shift=args.shift,negative_control='shift=0',
+        cross_domain_input_pairing='same inputs per split; separate source and shifted labels',
+        local_tangent_control='finite-difference CCNN parameter directions with 1 or 5 scalars',
         primary_limitation='non-matched kernel families still share discrete ODE integrator in 5 of 6 families',
         structured_large_budget='B>5 hybrid CCNN + spectral residual, not pure structured kernel',
         hypothesis_status='exploratory; no general-superiority claim')

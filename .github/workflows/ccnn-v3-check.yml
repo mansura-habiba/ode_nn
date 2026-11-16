@@ -1,0 +1,106 @@
+name: CCNN V3 reproducibility check
+
+on:
+  push:
+    branches:
+      - research/ccnn-v3-falsification-executable
+    paths:
+      - 'benchmarks/ccnn_falsification/**'
+      - 'notebooks/CCNN_Unmatched_Kernels_Gatefree_Repair_V3_Colab.ipynb'
+      - '.github/workflows/ccnn-v3-check.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'benchmarks/ccnn_falsification/**'
+      - 'notebooks/CCNN_Unmatched_Kernels_Gatefree_Repair_V3_Colab.ipynb'
+      - '.github/workflows/ccnn-v3-check.yml'
+  workflow_dispatch:
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy matplotlib
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Unit/invariant tests
+        run: |
+          python -m unittest discover -v -s benchmarks/ccnn_falsification -p 'test_*.py'
+      - name: Fast execution benchmark (1 seed, 3 families)
+        run: |
+          python benchmarks/ccnn_falsification/ccnn_generalization_benchmark.py \
+            --profile smoke --seeds 1 --epochs 2 --steps 3 \
+            --out /tmp/ccnn_v3_fast
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          p=Path('/tmp/ccnn_v3_fast')
+          arch=list(csv.DictReader((p/'architecture.csv').open()))
+          rows=list(csv.DictReader((p/'repair.csv').open()))
+          neg=list(csv.DictReader((p/'no_defect.csv').open()))
+          print('RUN SUMMARY',json.dumps({'architecture_rows':len(arch),'repair_rows':len(rows),'no_defect_rows':len(neg),'architectures':sorted({r['kind'] for r in arch}), 'methods':sorted({r['method'] for r in rows}), 'families':sorted({r['family'] for r in rows}), 'source_passes':sum(r['independent_source_pass']=='True' for r in rows)},sort_keys=True))
+          assert len(arch)==15 and len(rows)==45 and len(neg)==15
+          assert all((p/n).exists() for n in ('manifest.json','Figure_00_Unmatched_Teacher_Kernels.png','Figure_01_Coupled_PDE_ODE_Architecture.pdf','Figure_02_Repair_Tradeoffs.svg'))
+          with open('/tmp/ccnn_v3_fast_summary.md','w') as f:
+              f.write('# CCNN V3 fast execution\n\n**Status:** fast smoke only, 1 seed / 2 epochs / 3 steps, not scientific evidence.\n\n')
+              f.write('| Teacher | Architecture | Test MSE |\n|---|---|---:|\n')
+              for r in arch: f.write(f"| {r['family']} | {r['kind']} | {float(r['test_mse']):.5g} |\n")
+          PY
+      - name: Extended exploratory benchmark (manual opt-in, historically confounded)
+        if: github.event_name == 'workflow_dispatch'
+        timeout-minutes: 35
+        run: |
+          python benchmarks/ccnn_falsification/ccnn_generalization_benchmark.py \
+            --profile full --seeds 3 --epochs 12 --steps 20 \
+            --out /tmp/ccnn_v3_extended
+          python - <<'PY'
+          import csv, json, statistics, collections
+          from pathlib import Path
+          p=Path('/tmp/ccnn_v3_extended')
+          a=list(csv.DictReader((p/'architecture.csv').open()))
+          r=list(csv.DictReader((p/'repair.csv').open()))
+          n=list(csv.DictReader((p/'no_defect.csv').open()))
+          assert (len(a),len(r),len(n))==(90,270,90),(len(a),len(r),len(n))
+          by=collections.defaultdict(list)
+          for z in a:by[(z['family'],z['kind'])].append(float(z['test_mse']))
+          methods=collections.defaultdict(list)
+          for z in r: methods[(z['family'],z['method'],int(z['budget']))].append(z)
+          print('EXTENDED_RUN_SUMMARY', json.dumps(dict(
+            architecture_rows=len(a),repair_rows=len(r),no_defect_rows=len(n),
+            test_source_passes=sum(z['independent_source_pass']=='True' for z in r),
+            accepted=sum(z['accepted']=='True' for z in r),
+            no_defect_accepts=sum(z['accepted']=='True' for z in n),
+            seeds=sorted({int(z['seed']) for z in a}),
+            families=sorted({z['family'] for z in a})
+          ),sort_keys=True))
+          print('EXTENDED_ARCHITECTURE_MSE')
+          for family in sorted({x[0] for x in by}):
+            print(family, ' '.join(f'{kind}={statistics.mean(by[(family,kind)]):.6g}' for kind in ('attention','static','dynamic','ssm','lag')))
+          print('EXTENDED_REPAIR_MSE_56')
+          for family in sorted({x[0] for x in methods}):
+            print(family,' '.join(f'{kind}={statistics.mean(float(z["shifted_after"]) for z in methods[(family,kind,56)]):.6g}' for kind in ('structured','spectral','full')))
+          with (p/'evaluation_summary.json').open('w') as out:
+            json.dump({'architecture':{f'{fam}/{kind}':statistics.mean(values) for (fam,kind),values in by.items()},
+                       'count':{'architecture':len(a),'repair':len(r),'no_defect':len(n)},
+                       'source_passes':sum(z['independent_source_pass']=='True' for z in r)},out,indent=2)
+          PY
+      - name: Upload execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccnn-v3-fast-evidence
+          path: |
+            /tmp/ccnn_v3_fast
+            /tmp/ccnn_v3_fast_summary.md
+            /tmp/ccnn_v3_extended
+          if-no-files-found: warn
