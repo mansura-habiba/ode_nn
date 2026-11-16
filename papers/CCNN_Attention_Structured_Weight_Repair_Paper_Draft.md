@@ -143,15 +143,42 @@ The accompanying [executable publication notebook](../notebooks/CCNN_Lag_Kernel_
 
 **Scientific visualization policy.** Never mix an illustrative teacher sample with held-out experimental estimates without labelling the distinction. The proposal is highlighted by a consistent outline or hatch, but bars and axes are not rescaled to manufacture a win. Exported data and the scripts generating them remain associated with the manuscript. This pilot is not a journal-grade benchmark: confirmation requires many seeds, strong alternative models, out-of-family sources, matched budgets, and transparent uncertainty estimates.
 
-## 6. Discussion and limitations
+## 6. Discussion: a measured boundary, not an assumed repair advantage
 
-> The preliminary experiments demonstrate the feasibility of structure-aware convolutional repair, but the observed advantage is conditional on the data-generating mechanism and the choice of repair parameterization. The present evidence is insufficient to establish superiority over expressive unstructured filters or conventional optimization methods.
+The original CCNN formulation provides a compact parameterized historical-lag response that can be used alongside attention. The earlier matched-teacher pilot showed that a model containing a kernel family deliberately aligned with its generator attained low error. **This demonstrates representational compatibility in a favorable setting, not a general improvement in attention and not a verified repair advantage.** Its domain-gated interventions automatically protected the source domain, so they cannot establish ungated, non-regressive editing.
 
-**Charter alignment and V3 status.** The research contributions under investigation are RQ1-M (whether the coupled CCNN memory mechanism meaningfully augments attention) and RQ6-M (whether interpretable shared-weight edits recover shifted performance without unacceptable source-domain regression); RQ7's LLM weight-programming audit remains separate and untested. The coupled lag integral and ODE constitute a candidate mechanism, **not a research goal of demonstrating superior continuous-time numerical integration**. The [V3 falsification benchmark](../benchmarks/ccnn_falsification/README.md) now includes several unmatched kernel families, static and dynamic temporal filters and exponential-state baselines, matched editable-scalar budgets, local CCNN-tangent edits, low-rank/full FIR edits, and independent ungated preservation tests with paired cross-domain inputs. **The V3 experiments have not yet been executed or validated; no numerical outcome from them is claimed here.**
+The [V3 exploratory execution ledger](CCNN_V3_Execution_Evidence_Ledger.md) records **three seeds, six teacher families, twelve training epochs, and twenty repair steps**. CCNN achieved held-out MSE **0.000629** for matched chirp, versus **0.006847** for dynamic FIR. But on **all five unmatched teacher families**, dynamic FIR achieved lower MSE than CCNN. This is not a confirmatory generalization conclusion: source training adequacy, capacity/compute matching and generator independence were insufficient. It does, however, identify a **testable boundary**: a compact lag-structured prior may be advantageous near its functional family but unduly restrictive for other kinds of temporal memory.
 
-The experiment supplies initial evidence that the original CCNN lag-kernel architecture is a useful *inductive bias* for matching a time-varying causal filter and that this structure creates an intelligible repair coordinate. It does **not** establish superiority on independent processes, solve irregular sampling in continuous time, or demonstrate a novel theorem of precision. The direct dynamic-filter baseline already captures much of the task, making its comparison central rather than optional. The use of an external query and a matched teacher limits what can be inferred about attention itself.
+The V3 repair results raise a sharper failure: **87 of 90 zero-fault trials accepted weight updates**. A changed output after an edit could therefore be ordinary additional optimization rather than fault-specific correction. The prior statement that these experiments demonstrated structure-aware repair feasibility is withdrawn. The existing evidence does **not** isolate that mechanism.
 
-The domain-gated parameterization makes non-regression automatic. It cannot by itself justify a claim of successful non-regressive shared-weight fine-tuning. An unrestricted learned kernel may be repairable with few **function-space** degrees of freedom even when several raw weights must change; sparsity in parameter coordinates is representation-dependent. Any paper on repair precision should distinguish number of parameters, amount of function disruption, edit time, and preserved source-domain accuracy.
+### 6.1 Experiments that close the gap
+
+Use **one published independent benchmark**, the pinned Zoology multi-query associative recall (MQAR) generator, for attention, memory and repair. All algorithms must load **byte-identical** training, validation, calibration and locked-test examples (not merely independently generated datasets from the same distribution). The original Zoology trainer reports test configurations during training; the adapted comparison must reserve a genuine locked test not used for tuning, checkpoint selection or fault magnitude.
+
+| Stage | Measurement required | Competing explanation tested |
+|---|---|---|
+| **Shared-data contract** | Frozen tensor hashes, query masks and target labels shared across CCNN, FIR and official attention/Hyena/Based/Mamba | Dataset mismatch or test-driven model selection |
+| **Attention augmentation** | Adequate validation-selected training; held-out query recall and evidence selection; CCNN-branch ablation; parameter/compute accounting | Extra capacity, poor tuning of baselines, irrelevant memory branch |
+| **Model-weight repair** | Calibration-detectable weight faults with unchanged labels; blind edits; structured/tangent/full FIR/Adam alternatives; zero-fault placebo and locked-test source retention | Continued training, oracle fault knowledge, hard domain gating |
+| **Interpretation and replication** | Paired multi-seed uncertainty; results stratified by lag regime and fault class; failure modes and compute | Favorable teacher, isolated lucky seed, mismatched functional damage |
+
+These stages are linked: **a memory branch that does not contribute to a sufficiently trained checkpoint cannot support a meaningful repair test**. If the fault is not detectable under calibration, repair outcomes must be labeled as such rather than assigned an invented recovery. A repair that regresses untouched capabilities fails the preservation criterion even when the affected-domain loss improves.
+
+### 6.2 Boundary-oriented scientific outcomes
+
+The completed paper will report the **observed condition → measured effect → mechanism interpretation → exception → next experiment**, instead of ending at a binary supported/rejected statement:
+
+1. **Both retrieval and repair improve:** evidence for a shared structural advantage in the measured lag-memory and fault regime; investigate transfer boundaries.
+2. **Retrieval improves, repair does not:** attention augmentation benefits from a temporal prior but its weight coordinates are not uniquely repairable; investigate local tangent geometry or numerical conditioning.
+3. **Repair improves, retrieval does not:** the contribution may be localized edit geometry rather than general memory superiority; study preservation-constrained adapters.
+4. **Only matched regimes benefit:** quantify how kernel mismatch and dynamic lag variation eliminate the effect; consider adaptive/mixed lag kernels only if the failure indicates a specific limitation.
+5. **Neither benefit survives fair comparison:** report the negative finding and its mechanism. Do not redesign the teacher to make the proposed model win.
+
+The five cases are **a predeclared interpretation framework, not measured final outcomes**. Their frequency, uncertainty and cost will be determined from the frozen benchmark. Existing V3 findings remain separate exploratory evidence; they are not copied into Zoology outcome tables.
+
+### 6.3 Limits of the current implementation
+
+The current notebook tests a **new direct attention-logit coupling** built from the original CCNN lag integral and leaky state. It does not reproduce the attention architecture of the 2021 paper, which did not study this coupling. The independent unstructured comparator must have access to the same logit-modification pathway. The official Zoology controls must share frozen data and an untouched test; their implementation and compute budgets must be audited before comparative claims. A small Colab run is an exploratory experiment, not an exact multi-GPU reproduction of the ICLR 2024 figure.
 
 ## 7. Conclusion and future research
 
