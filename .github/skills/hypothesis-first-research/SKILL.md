@@ -1,96 +1,88 @@
 ---
 name: hypothesis-first-research
-description: Run publication-quality empirical research from a frozen hypothesis through published benchmark comparisons, paper-style notebooks, decision checkpoints, and minimal justified artifacts.
+description: Portable stage-gated pipeline for empirical research in any topic or repository. Source-check, register at most four hypotheses, anchor tests in published experiments, run reproducible comparisons, adjudicate and publish with minimal artifacts.
 ---
 
-# Hypothesis-First Research
+# Hypothesis-First Research — Portable Pipeline
 
-## Identity and constraints
-You are a scientific collaborator, not a document factory. Preserve the researcher's intended mechanism; do not silently replace it with an easy toy. **At most four active hypotheses, preferably one primary hypothesis.** Before creating or modifying any file, explain the scientific purpose and why an existing artifact cannot serve it. Reuse existing files; no unrequested V2/V3 forks, task explosions, speculative architecture docs, or folders.
+## When to use
+Apply to **any research**, in this or another repository, or outside GitHub. Treat this as a high-level process skill, not a domain-specific CCNN skill. A project only uses it when the skill is accessible/installed in that environment; never imply it is automatically installed everywhere.
 
-## Source-of-truth and research-lineage gate (mandatory before literature or experiments)
-**Never infer a model's original identity from equations, notebook labels, or a secondary summary.** When the user supplies an original paper, read that primary paper (model section, equations, figures, experiments) before formulating the research question. Verify source metadata (title, author, year and venue/preprint status) and cite exact sections/equations/figures. Verify *what was actually evaluated* separately from what the paper motivates or claims. For a source PDF, inspect relevant pages/figures rather than relying only on snippets.
+**Mission:** Research question -> primary-source and state-of-the-art audit -> hypothesis -> published experimental protocol -> controlled experiment -> verdict -> publication. The researcher's intended contribution is the starting point, not an assumption the agent may replace with a convenient toy.
 
-Maintain an explicit three-column lineage *inside the existing canonical research checkpoint*: **Original published model**, **later user-defined extensions**, **proposed/unvalidated modifications**. For each model or mechanism, record the authoritative source (paper URL + precise equation/figure, or repository path + commit), who introduced it, and how it differs from its parent. A shared mathematical primitive does NOT justify identifying two architectures as the same. Preserve user-provided corrections in the checkpoint and recheck the primary documents; when the sources conflict, state the discrepancy rather than silently overriding either.
+**Non-negotiables:** maximum **four** active hypotheses, ideally one primary; no fabricated references, outcomes or runs; no superiority declaration without adequately trained and fairly evaluated comparators; no silent redefinition of the method. Prefer **zero** new files during scoping, **one** canonical research record, **one** research issue for the objective when GitHub is used, and **one** main executable notebook per study. Every new file, issue, experiment and dependency requires an explicit reason.
 
-**CCNN-specific correction (2026-11-16):** Original/vanilla CCNN is the coupled neural PDE–ODE model in Habiba & Pearlmutter, *Continuous Convolutional Neural Networks: Coupled Neural PDE and ODE*, arXiv:2111.00343 (model diagram Figures 2–3; equations 2–6). The original equations include a causal time-delay kernel K(τ,W_K,t) and PDE integral encoding; that mathematical fact does not establish that the **later separately named lag-kernel architecture** is the original model. Label this later architecture as an extension unless a primary source specifically proves otherwise. Do not describe diffusion-only toys as a faithful test of either without explicit equivalence justification.
+## The pipeline (checkpoints are mandatory)
 
-Before implementation, produce a concise *model identity / difference table* and ask the researcher about any unresolved architecture ambiguity. Distinguish source fact, researcher intent, and AI interpretation, tagging the confidence/evidence for each. A failed source-verification gate BLOCKS hypothesis freezing, architecture diagrams and code creation. A prior assistant statement, existing README, or earlier notebook does not outrank the primary paper.
+| Stage | Owner / adopted method | Exit evidence | Block if missing |
+| --- | --- | --- | --- |
+| **P0 Recover and scope** | Researcher + pipeline; read repository and checkpoint | Original question, researcher intent, prior decisions, constraints and next action | Clarify material ambiguities before creating |
+| **P1 Verify literature and lineage** | Selectively adopt **KalarisLabs literature-review + citation-verification** methods | Verified original model, later variants, relevant published SOTA and genuine gap; exact sources | Do not freeze architecture or claim |
+| **P2 Formulate and freeze hypothesis** | Researcher approves <=4 falsifiable hypotheses | Scope, endpoint, meaningful effect, comparator, uncertainty, cost constraints and rejection criteria | Do not run main benchmark |
+| **P3 Lock published experimental protocol** | Source experiment + **KalarisLabs experimental-design** principles | Published dataset/splits/baselines/training/metrics/repeats; adaptations labelled; fixed test rules | No scientific run |
+| **P4 Reproducible execution** | **Autoresearch-inspired deterministic runner** (only when useful) | Pilot validity; fair full baselines; immutable evaluator; seeds/config/commit/results ledger | No empirical conclusion |
+| **P5 Scientific decision** | Compare observed results with frozen criteria | SUPPORTED / REJECTED / INCONCLUSIVE; magnitude, uncertainty, bounded claim and limitations | Additional run only with discriminating reason |
+| **P6 Write and reconcile** | Existing paper/notebook structure | Publication-style results, source-backed architecture, citations, reproducibility, file inventory | Never manufacture a success story |
 
-## Existing research harnesses: reuse selectively, do not import wholesale
-Before building any research infrastructure, inspect whether an existing tool/skill suffices. Candidate references (verify current details and suitability):
-- KalarisLabs/research-agent-skills: literature-review, citation-verification, reproducibility, and verification skills. Reuse individual methods; **do not** adopt one-file-per-paper defaults.
-- SakanaAI/AI-Scientist-v3: isolated investigations, ablations, sealed final evaluation and evidence-audited paper pipeline. Adapt relevant experimental controls only.
-- karpathy/autoresearch: one editable code surface, immutable evaluator, comparable metric, experiment ledger; **do not** import its unbounded optimization loop or treat benchmark tuning as scientific proof.
-- pbi-agent/skills research-lab: resume/checkpoint discipline; keep state in the existing canonical research record rather than duplicating files.
+**Gate contract:** Finish and record the stage's evidence in the canonical record; tick the matching checklist in the existing issue; record current branch/commit, accepted and rejected decisions, blocker, and **exactly one next action**. On every resumed session start at P0, recover the last checkpoint and continue at the first unfinished gate. Do not silently reset the question, or open new issues for routine subtasks.
 
-Decide build-versus-reuse explicitly in the GitHub research issue. No new harness, workflow file, dependency, or repo structure unless an identified unmet requirement and test demonstrate its necessity.
+### P0. Recover intent and context
+Before proposing research, read the original researcher question, available primary source, current notebooks, GitHub issue, and last checkpoint. Restate what is believed established vs merely proposed. Ask up to **three targeted questions** if answers materially change the proposed contribution, benchmark, comparisons, budget or acceptance criteria; do not repeat questions already answered. If no blocker, proceed. Never optimize for document count or activity.
 
-## Required lifecycle: question → literature → hypothesis → experimental anchor → run → decide → paper
-Follow the sequence. Do not start another experiment simply because a result was weak. Do not create publication artifacts before there is evidence to report.
+### P1. Primary-source identity, literature search and verification
+Read the **full primary paper sections and relevant figures, equations, supplements and experimental tables**. Distinguish in a compact lineage table: **original published method**, **later user-authored extensions**, and **new unvalidated proposals**; provide exact source references and differences. A shared formula does not mean two methods are identical. Treat user corrections as a signal to reverify source-level evidence, not a reason to invent new claims. Existing README and agent-generated summaries are not primary authority.
 
-### 0. Recover state and clarify
-On EVERY resumed session, read this skill, the repository's canonical research charter/notebook, current GitHub research issue, and its latest checkpoint. Provide the user a short summary of: original intended claim; frozen hypotheses; accepted/rejected decisions; experimental evidence and limitations; current blocker; next task. Never silently reset decisions.
+Adapt these verified upstream skill patterns:
+- [KalarisLabs literature-review](https://github.com/KalarisLabs/research-agent-skills/tree/main/skills/literature-review): scoped search terms, inclusion/exclusion rationale, original method/experiment inspection, evidence table, related and negative results.
+- [KalarisLabs citation-verification](https://github.com/KalarisLabs/research-agent-skills/tree/main/skills/citation-verification): resolve DOI/arXiv/proceedings; compare title, author and year; verify each statement against the cited paper, not merely its existence.
+- [KalarisLabs experimental-design](https://github.com/KalarisLabs/research-agent-skills/tree/main/skills/experimental-design): replication, controlled comparison, randomization/blocking where applicable, identification of confounders and appropriate independent units.
 
-Ask up to three high-leverage clarification questions when a gap would materially change the question, experiment, comparator, metric or claim. Examples: intended novelty/mechanism, most meaningful comparison, available budget, acceptance threshold. Do not spend a day reframing something the researcher has already said. If sufficiently specified, proceed without questions.
+**Selective adoption only:** Read upstream instructions before using their methods/scripts. Do not copy their dependencies, mandatory figure/PDF outputs, one-file-per-paper routines or whole framework. In ML, prefer directly relevant ICLR/ICML/NeurIPS/TMLR/JMLR protocols when appropriate; other fields require their own highest-relevance published standards. Record source year, peer-review/preprint status, architecture, data, strong baselines, evaluation, reported results, available code, and evidence gaps. Never invent SOTA rankings.
 
-### 1. State of the art BEFORE formulation is frozen
-Find primary published papers, prioritizing directly similar ICLR/NeurIPS/ICML/TMLR/JMLR studies and recent relevant baselines. Inspect methods, experiment sections and supplements, not abstracts alone. Build a concise **evidence table** covering citation/DOI or URL, venue/year, question, mechanism, dataset/task, data split, metrics, trained baseline, published result, compute, public code and gap. Differentiate verified papers from preprints, claims from reproduced results, and SOTA benchmark leaders from conceptual analogues. Search for negative results and simple competitors. Do not fabricate rankings or paper details.
+### P2. Register and approve hypotheses (<=4)
+Define H1 first; only introduce H2-H4 when a distinct scientific claim needs testing. Each H must include: exact mechanism/claim, domain and published anchor, falsifying observation, metric and minimum meaningful difference, competing mechanism/explanation, adequately trained comparators, uncertainty/replication criterion, preservation/cost constraints, and what the decision changes. Get researcher's agreement on material scientific tradeoffs before freezing. Freeze and timestamp the registration **before** held-out results. Ablations and negative controls are not new hypotheses.
 
-### 2. Formulate and freeze hypotheses (maximum four)
-For each H_i specify: falsifiable claim, rationale, tested domain, benchmark and primary endpoint, comparator (including strong conventional optimization where relevant), meaningful minimum effect, confidence/uncertainty criterion, non-regression/cost constraints, competing explanation, failure condition, and cited scientific anchor. Prefer one decisive H1; additional hypotheses only if genuinely distinct and warranted. Get the researcher's signoff on consequential choices, then record the frozen version in the canonical checkpoint. Ablations are tests of a hypothesis, not new hypotheses.
+### P3. Lock a published experimental anchor
+Identify **the actual published paper section, figure/table or supplement** underlying the experiment. Extract data generation/acquisition, preprocessing, train/validation/test splits, architecture, optimization, baseline tuning budget, compute, independent seeds/replications, metrics, uncertainty and code revision. Write a concise correspondence table: **faithful reproduction / necessary adaptation / genuinely new component**. Confirm the strongest fair alternative, a simple baseline, and negative controls. Lock the evaluator and test data rules. Adequately train baselines on **identical data and fair optimization budget**. A toy may be a debugging pilot but must not substitute for a hypothesis's published benchmark without explicit justification.
 
-### 3. Reconstruct published experiment protocol
-Pick the closest **published experimental setup** as anchor, naming the exact table/figure/section and source. Extract dataset construction and splits, preprocessing, architecture, training steps/optimizer/schedule, initialization, seeds, tuning protocol, baselines, compute, metrics and uncertainty. Distinguish **faithful replication**, **necessary adaptation**, and **new proposal**. Use the same data, training opportunity, tuning budget and held-out test criteria for all methods. Strong fully trained comparators are mandatory; compare accuracy, retention, robustness, runtime/compute as relevant. Set a fixed protocol and acceptance threshold BEFORE viewing the main results. Avoid test leakage, fragile cherry-picked examples, undertrained baselines and overclaims.
+### P4. Minimal deterministic experiment harness
+Borrow from [karpathy/autoresearch](https://github.com/karpathy/autoresearch) its **small editable surface, immutable evaluation code, fixed resource rules, concise per-run ledger, and keep/discard reason**. **Reject** its default endless loop, automatic hypothesis mutation, evaluation-set overfitting, fixed five-minute training policy (unless scientifically relevant), and one-metric-wins-science interpretation.
 
-### 4. Run the minimum decisive experiment
-Only run experiments which can answer a frozen hypothesis. Start with a pilot for environmental and implementation validity, explicitly NOT a scientific result. Run the registered main benchmark and baselines, multiple seeds where feasible, sanity tests, essential ablations and negative/placeholder controls (such as random edits or generic optimizers when testing weight repair). Keep fair hyperparameter selection separate from held-out evaluation. Log code revision, dataset version, seed, configuration, environment, output metrics, uncertainty and failure logs in the **same canonical notebook** or existing tracking location.
+Prefer reusing existing runnable Python/notebook code and existing logging. **Only introduce a minimal Python runner when repeated manual execution would otherwise cause inconsistent evaluation.** It must:
+1. Accept a versioned experiment spec: hypothesis ID, dataset and split hashes, baselines, code commit, model/config, seeds, budget, evaluator ID, predeclared metric and threshold.
+2. Validate inputs and prevent train/test overlap, missing baseline evidence, evaluation-code mutation, and unregistered protocol changes; fail closed with actionable errors.
+3. Execute the **same sealed evaluation** for each registered method; write per-run status `PASS/FAIL/CRASH`, metrics and resource consumption to one machine-readable ledger (TSV or JSONL), with no claim about a scientific verdict.
+4. Generate a comparator table from real recorded results, with independent repeats and uncertainty. Distinguish infra pilot from main test; never relabel a pilot as confirmation.
+5. Stop after the registered runs. The runner **must not generate new hypotheses, rewrite code autonomously, rerun indefinitely, or declare improvement without the scientific gate**.
 
-Do not report a successful run as support for a hypothesis unless the actual benchmark comparison justifies it. No invented execution, findings or code coverage.
+**Determinism boundaries:** Explicit seeds, pinned software/hardware details, data and evaluator hashes and stable ordering improve repeatability; GPU kernels and some libraries may remain nondeterministic. Declare known sources of variance rather than promising bitwise-identical outputs. Use actual run evidence only; never claim a Python harness was executed unless execution logs exist. No extra script is required just because the architecture allows one.
 
-### 5. Interpret and decide, not 'everything is promising but trust nothing'
-Write a claim-by-claim **result → comparator → magnitude → uncertainty → interpretation → scientific verdict**. Give a definite scoped verdict:
-- SUPPORTED: predeclared effect threshold and controls met on the tested setting; say precisely what works and against which comparators. Empirical support is not mathematical proof or universal superiority.
-- REJECTED: substantive comparison fails to meet the stated claim under adequate conditions; say what lost and what that rules out.
-- INCONCLUSIVE: diagnostic failure, inadequate training, insufficient precision, or missing required comparator means the stated test could not decide; identify the one missing observation, not a generic caveat.
+### P5. Scientific adjudication, not generic caution
+For each H report: **result -> closest published comparator -> effect size -> uncertainty -> alternative explanations/ablations -> verdict -> scope**. Verdicts:
+- **SUPPORTED:** all preregistered primary conditions met with meaningful result; state precisely what outperformed what, on which benchmark, under which conditions. Put that specific finding in the paper's contribution.
+- **REJECTED:** adequate test contradicts or fails preregistered success criterion; identify what was ruled out.
+- **INCONCLUSIVE:** benchmark/baseline/implementation/statistical adequacy prevents judgment; identify exactly what remains missing.
 
-Explain what worked, what did not, boundary conditions, likely mechanisms, and which rival explanation survived. No vague boilerplate, no post hoc moving goalposts. If a significant superiority claim is supported, **place it explicitly as the contribution** with scope and evidence; do not end by negating the result with generic distrust.
+Do not follow a supported finding with a blanket 'trust nothing' disclaimer. Do not claim global proof or state-of-the-art superiority from a narrow toy. Do not hide failed conditions. Additional experiments are allowed **only** when a named unresolved claim predicts a discriminating observation that may change a registered decision; record approval and reuse existing code and notebook. If exploratory findings motivate H2-H4, register with fresh rationale before follow-on confirmatory evaluation.
 
-An additional experiment is permitted ONLY if it has a clearly named unresolved claim, a predicted discriminating outcome, and an explicit decision it could change. Document the justification and reuse the notebook. A new hypothesis requires fresh literature rationale and an updated, still ≤4-hypothesis register.
+### P6. Paper-style notebook and evidence-led artifacts
+The main notebook should read like an empirical paper, with: **Abstract; Research question and hypotheses; Related work/SOTA; Source basis and proposed method; Published-protocol correspondence; Implementation; Results against published and retrained baselines; Statistical/ablation analysis; Hypothesis verdict; Limits and boundary of validity; Conclusion; References and reproducibility manifest.** Every code/experiment section must have a research motivation and interpretation. Results must be generated by executed code, not placeholder tables.
 
-### 6. Write notebooks as empirical papers
-An approved notebook must present a continuous scholarly argument with sections:
-1. **Abstract** (research claim and eventually actual finding, no invented results)
-2. **Research question and hypotheses**
-3. **Related work / state-of-the-art evidence**
-4. **Source basis and proposed method** (mathematics and differences from prior work)
-5. **Experimental design and published-protocol correspondence** (datasets, splits, baselines, reproducibility)
-6. **Implementation and executable cells**
-7. **Results** (real tables/plots generated from executed runs; no placeholders disguised as findings)
-8. **Analysis and hypothesis verdict** (comparative effect sizes, confidence, mechanisms, negative results)
-9. **Limitations and boundary of validity**
-10. **Conclusion and precise next research question**
-11. **References and reproducibility manifest**.
+**After substantive results**, update one architecture Markdown describing the *actually tested* method, one consolidated notebook and the existing manuscript. A scientifically sound negative result may also be documented; no need to fabricate superiority. If a project's format is not notebooks, follow the same argument in its native artifact.
 
-Every experiment must be motivated in prose, mapped to a hypothesis and source paper, and interpreted after output. Write like an ICLR empirical paper, not a stream of coding notes or reassurance. Use 'demonstrates on benchmark X under protocol Y', not 'proves globally'.
+## Durable checkpoint and task contract
+Keep **one canonical state section** in an existing research charter or notebook (or create one record only when no suitable artifact exists):
+- Original researcher wording, question, lineage with exact source and the approved H1-H4 register.
+- Paper/benchmark anchor; locked evaluation protocol, fairness decisions and thresholds.
+- Accepted/rejected decisions with reasons, responsible party and date.
+- Run ledger pointer and digest: git SHA, data hash, config, seeds, metrics, uncertainty, failures, and scientific verdict.
+- Stage status P0-P6, currently unresolved scientific point, **one next discriminating action**.
+- Inventory of changed/approved/prohibited artifacts and justification.
 
-### 7. Publication artifacts only AFTER results
-When a substantive finding exists, create or update the **one** architecture Markdown describing the actually validated method (not an imagined architecture), consolidate **one** publication-grade notebook per main study, and develop the paper in the repository's existing manuscript structure. If the tested claim is rejected, publish the negative finding or pivot only with a newly justified hypothesis; never inflate results. Do not duplicate notebooks or source documents without explicit need.
+For GitHub work, use **one issue per coherent research goal**, update its checklist and dated decision log rather than opening one issue per cell or run. Across sessions, read this issue and the canonical state first. Outside GitHub, reuse the host task tracker or checkpoint, without spawning a new tool ecosystem.
 
-## Durable checkpoints and GitHub tasks (mandatory)
-Use **one canonical research checkpoint**, preferably a fixed Markdown section in the existing research charter or main notebook, not a new file by default. Update after each research gate, meaningful run, user decision, or interruption:
-- Last updated date and git commit/branch
-- Researcher's original question and intended mechanism (verbatim if useful)
-- Frozen hypothesis register H1–H4 and exact success/failure criteria
-- Primary published papers and experimental anchor sections
-- Decisions made, by whom, why, and what was rejected
-- Experimental registry: run identifier, benchmark, baselines, seeds, protocol, links to outputs, quantitative results and verdict
-- Open scientific uncertainty and one next decision/action
-- Artifact inventory with justification: existing files to reuse, approved files to create, files explicitly not to create.
+## Creation and change-control budget
+Default **no files** for P0-P2; edit existing notebook/record for P3-P5; only then architecture and manuscript. An optional deterministic Python runner is **one justified file** at most for a study unless demonstrated necessary otherwise. Before every edit, explain what decision it enables and why an existing file cannot serve it. After a change, report exact modified paths and whether code/experiments were actually run. Do not auto-delete unrelated material or introduce dependencies without permission. Researcher-approved changes to the question or protocol must appear in the checkpoint before implementation.
 
-Use **one GitHub issue per coherent research objective**, with an evolving checklist for: literature verified; hypothesis frozen; protocol extracted; pilot validated; baselines adequately trained; primary experiment executed; results analysed; verdict registered; architecture/notebook/paper updated. Update the same issue instead of opening 15 micro-tasks. Issue comments may store dated checkpoints and links; canonical checkpoint remains authoritative. Never close the issue before scientific decision and deliverables are reconciled.
-
-## Creation budget and final response
-Default: **0 files in hypothesis/literature phase; edit an existing notebook for experiments; architecture and paper only after evidence**. Exception requires explicit reason and user approval for substantial additions. Before every commit enumerate paths and why each is necessary; after committing report changed file count and links. Do not auto-clean unrelated repo material.
-
-Every update to the user should report: current scientific claim, published experimental comparator, measured outcome (if any), verdict, next discriminating action, and checkpoint/issue location. Never say 'all good but trust nothing'.
+## Response standard
+Every progress report states **current question, source anchor, hypothesis, evidence, verdict/status, decision gate, next action, and checkpoint location**. Never conflate completed code with a supported scientific contribution. When evidence does support the claim, clearly say so.
