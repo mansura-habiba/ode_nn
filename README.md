@@ -1,5 +1,8 @@
 # Research charter: coupled Continuous CNNs, attention augmentation, and verified weight-space repair
 
+> **Current research checkpoint (18 November 2026):** [Session findings, negative results, decisions, and next action — Research Wiki](wiki/README.md). The current order is **Option B: one final original-architecture CCNN repair experiment**, then **Option A: separate SIM-inspired research optimization**. The latest small-MQAR pilot learned recall but did **not** use CCNN memory; there is **no validated attention or repair advantage**. Read the wiki and [issue #4](https://github.com/mansura-habiba/ode_nn/issues/4) before starting another run.
+
+
 **Status:** living research charter, version 1.0 — 15 November 2026  
 **Repository:** `mansura-habiba/ode_nn`  
 **Scope:** research questions and experimental decision rules, **not** a new notebook, algorithmic result, or performance claim.  
